@@ -26,6 +26,8 @@ pub enum SignalMessage {
         name: String,
         #[serde(default)]
         password: Option<String>,
+        #[serde(default)]
+        create: bool,
     },
     Leave {
         room_id: String,
@@ -71,6 +73,7 @@ pub enum SignalMessage {
         locked: bool,
     },
     RoomLockedError,
+    RoomNotFound,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -112,6 +115,7 @@ pub const EVENT_ERROR: &str = "error";
 pub const EVENT_KICKED: &str = "kicked";
 pub const EVENT_FORCE_MUTED: &str = "force-muted";
 pub const EVENT_ROOM_LOCKED: &str = "room-locked";
+pub const EVENT_PING_UPDATE: &str = "ping-update";
 
 // ── Audio device info (for mic selector) ──
 

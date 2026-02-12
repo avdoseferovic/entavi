@@ -34,10 +34,20 @@ export async function setupListeners(): Promise<UnlistenFn[]> {
           if (s.locked !== undefined) {
             state.isRoomLocked = s.locked
           }
+          // Switch to room view when server confirms join
+          if (state.isJoining) {
+            state.isJoining = false
+            state.currentView = 'room'
+            showNotification('Joined Room', `Code: ${state.roomCode}`)
+          }
           break
         case 'error':
+          state.isJoining = false
           if (s.message === 'Room is password-protected') {
             state.joinPasswordNeeded = true
+            state.currentView = 'join'
+          } else if (s.message === 'Room not found') {
+            state.roomNotFound = true
             state.currentView = 'join'
           } else {
             setStatus(s.message ?? 'An error occurred', 'error')
@@ -103,6 +113,12 @@ export async function setupListeners(): Promise<UnlistenFn[]> {
   unlisteners.push(
     await listen<boolean>('room-locked', (event) => {
       state.isRoomLocked = event.payload
+    })
+  )
+
+  unlisteners.push(
+    await listen<number>('ping-update', (event) => {
+      state.pingMs = event.payload
     })
   )
 

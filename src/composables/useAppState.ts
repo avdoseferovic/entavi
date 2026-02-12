@@ -12,11 +12,14 @@ const state = reactive({
   isHost: false,
   isRoomLocked: false,
   peerList: new Map<string, string>(),
+  isJoining: false,
   joinPasswordNeeded: false,
+  roomNotFound: false,
   statusText: 'Connecting...',
   statusState: 'connecting' as 'connecting' | 'connected' | 'error',
   noticeBannerVisible: false,
   copyFeedback: false,
+  pingMs: null as number | null,
 })
 
 const peerCount = computed(() => state.peerList.size + 1)
@@ -43,7 +46,10 @@ function resetRoomState() {
   state.isHost = false
   state.isRoomLocked = false
   state.peerList = new Map()
+  state.isJoining = false
   state.noticeBannerVisible = false
+  state.roomNotFound = false
+  state.pingMs = null
 }
 
 function setStatus(text: string, statusState: 'connecting' | 'connected' | 'error' = 'connecting') {

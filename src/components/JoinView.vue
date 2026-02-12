@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { ArrowLeft } from 'lucide-vue-next'
 import { useAppState } from '../composables/useAppState'
 
@@ -13,22 +13,17 @@ const emit = defineEmits<{
   join: [roomId: string, password: string | null]
 }>()
 
-// When returning to join view due to password-protected room, restore roomCode
-watch(() => state.joinPasswordNeeded, (needed) => {
-  if (needed && state.roomCode) {
-    roomId.value = state.roomCode
-    state.joinPasswordNeeded = false
-  }
-})
-
 function submit() {
+  if (state.isJoining) return
   const code = roomId.value.trim().toLowerCase()
   if (!code) return
+  state.roomNotFound = false
   emit('join', code, password.value.trim() || null)
 }
 
 function goBack() {
   state.joinPasswordNeeded = false
+  state.roomNotFound = false
   emit('back')
 }
 </script>
@@ -41,19 +36,24 @@ function goBack() {
       type="text"
       placeholder="e.g. a1b2c3"
       autofocus
+      :disabled="state.isJoining"
       @keydown.enter="submit"
     />
+    <p v-if="state.roomNotFound" class="form-label error-hint">Room not found</p>
     <div v-if="state.joinPasswordNeeded || password" class="password-group">
       <p class="form-label password-hint">This room is password-protected</p>
       <input
         v-model="password"
         type="text"
         placeholder="Room password"
+        :disabled="state.isJoining"
         @keydown.enter="submit"
       />
     </div>
-    <button class="btn-primary" @click="submit">Join</button>
-    <button class="back-btn" @click="goBack">
+    <button class="btn-primary" :disabled="state.isJoining" @click="submit">
+      {{ state.isJoining ? 'Joining...' : 'Join' }}
+    </button>
+    <button class="back-btn" :disabled="state.isJoining" @click="goBack">
       <ArrowLeft :size="16" />
       Back
     </button>

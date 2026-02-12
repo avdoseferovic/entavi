@@ -29,7 +29,7 @@ header .subtitle {
     font-size: 13px;
 }
 
-.view { display: flex; flex-direction: column; flex: 1; }
+.view { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 
 /* ── Buttons ── */
 button {
@@ -192,10 +192,27 @@ input[type="text"]::placeholder {
     font-size: 18px;
     font-weight: 600;
 }
+.room-header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
 .room-peer-count {
     font-size: 13px;
     color: #888;
 }
+
+/* ── Ping indicator ── */
+.ping-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+}
+.ping-good { color: #22c55e; }
+.ping-medium { color: #f59e0b; }
+.ping-bad { color: #ef4444; }
+.ping-none { color: #666; }
 
 /* ── Room subtitle (code + copy) ── */
 .room-subtitle {
@@ -434,6 +451,11 @@ input[type="text"]::placeholder {
 }
 .password-hint {
     color: #f59e0b;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+.error-hint {
+    color: #ef4444;
     font-size: 13px;
     margin-bottom: 8px;
 }

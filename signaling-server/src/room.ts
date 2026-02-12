@@ -6,6 +6,7 @@ interface JoinMessage {
   peer_id: string;
   name: string;
   password?: string;
+  create?: boolean;
 }
 
 interface SignalMessage {
@@ -114,6 +115,15 @@ export class Room extends DurableObject {
 
     switch (msg.type) {
       case "join": {
+        // Check if room already has peers (i.e. exists)
+        const hasExistingPeers = this.getHostPeerId() !== null;
+
+        // If this is a join (not create) and no one is in the room, reject
+        if (!msg.create && !hasExistingPeers) {
+          ws.send(JSON.stringify({ type: "room_not_found" }));
+          return;
+        }
+
         // Reject if room is password-protected and password doesn't match
         const storedPassword = this.getRoomPassword();
         if (storedPassword !== "" && msg.password !== storedPassword) {
@@ -122,7 +132,7 @@ export class Room extends DurableObject {
         }
 
         // Determine if this peer is the host (first to join)
-        const isHost = this.getHostPeerId() === null;
+        const isHost = !hasExistingPeers;
         const locked = this.isLocked();
 
         // Attach peer ID, name, host flag, and password to this websocket (hibernation-safe)

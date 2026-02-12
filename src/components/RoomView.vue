@@ -5,6 +5,7 @@ import { useAppState } from '../composables/useAppState'
 import ParticipantItem from './ParticipantItem.vue'
 import RoomControls from './RoomControls.vue'
 import HostControls from './HostControls.vue'
+import PingIndicator from './PingIndicator.vue'
 
 const { state, peerCountLabel, getDisplayName } = useAppState()
 
@@ -29,7 +30,10 @@ async function copyRoomCode() {
   <div class="view">
     <div class="room-header">
       <h2>{{ state.roomName }}</h2>
-      <span class="room-peer-count">{{ peerCountLabel }}</span>
+      <span class="room-header-right">
+        <PingIndicator />
+        <span class="room-peer-count">{{ peerCountLabel }}</span>
+      </span>
     </div>
     <div class="room-subtitle">
       <code>{{ state.roomCode }}</code>

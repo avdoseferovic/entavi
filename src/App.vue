@@ -48,13 +48,13 @@ async function joinRoom(roomId: string, password: string | null) {
   state.isMicTesting = false
   state.roomCode = roomId
   state.roomName = `Room ${roomId}`
-  setStatus('Connecting to room...', 'connecting')
-  state.currentView = 'room'
+  state.isJoining = true
+  state.roomNotFound = false
 
   try {
     await tauri.joinRoom(roomId, getDisplayName(), password)
-    tauri.showNotification('Joined Room', `Code: ${roomId}`)
   } catch (err) {
+    state.isJoining = false
     setStatus(`${err}`, 'error')
   }
 }
