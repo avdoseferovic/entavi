@@ -32,9 +32,10 @@ async fn create_room(
     engine: tauri::State<'_, Engine>,
     room_name: String,
     name: String,
+    password: Option<String>,
 ) -> Result<String, String> {
     engine
-        .create_room(room_name, name)
+        .create_room(room_name, name, password)
         .await
         .map_err(|e| e.to_string())
 }

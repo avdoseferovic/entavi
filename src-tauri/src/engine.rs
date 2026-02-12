@@ -51,10 +51,22 @@ impl Engine {
     }
 
     /// Create a new room. Returns the room_id (6-char code).
-    pub async fn create_room(&self, room_name: String, name: String) -> Result<String> {
+    pub async fn create_room(&self, room_name: String, name: String, password: Option<String>) -> Result<String> {
         let room_id = uuid::Uuid::new_v4().to_string()[..6].to_string();
         self.join_room_inner(room_id.clone(), room_name, name, None)
             .await?;
+
+        // If a password was provided at creation time, lock the room immediately
+        if let Some(pw) = password {
+            let guard = self.inner.lock().await;
+            if let Some(inner) = guard.as_ref() {
+                inner
+                    .signal_tx
+                    .send(SignalMessage::LockRoom { password: Some(pw) })
+                    .map_err(|_| anyhow::anyhow!("Signal channel closed"))?;
+            }
+        }
+
         Ok(room_id)
     }
 

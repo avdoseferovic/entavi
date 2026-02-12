@@ -91,6 +91,11 @@ export class Room extends DurableObject {
 
     this.ctx.acceptWebSocket(server);
 
+    // Auto-respond to pings without waking the hibernated DO
+    this.ctx.setWebSocketAutoResponse(
+      new WebSocketRequestResponsePair("ping", "pong")
+    );
+
     return new Response(null, { status: 101, webSocket: client });
   }
 

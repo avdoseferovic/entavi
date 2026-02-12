@@ -1,0 +1,453 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+}
+
+.container {
+    padding: 28px 28px 24px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    margin-bottom: 24px;
+}
+header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+header .subtitle {
+    color: #666;
+    font-size: 13px;
+}
+
+.view { display: flex; flex-direction: column; flex: 1; }
+
+/* ── Buttons ── */
+button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+button:hover { opacity: 0.85; }
+button:active { opacity: 0.7; }
+
+.btn-primary {
+    background: #4f46e5;
+    color: #fff;
+}
+.btn-secondary {
+    background: #252538;
+    color: #ccc;
+    border: 1px solid #333350;
+}
+.btn-danger {
+    background: #dc2626;
+    color: #fff;
+}
+
+/* ── Action row (Create / Join side by side) ── */
+.action-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+.action-row button {
+    flex: 1;
+    padding: 14px 16px;
+    font-size: 15px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+/* ── Settings section ── */
+.section-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.section-divider span {
+    color: #555;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+.section-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #2a2a40;
+}
+
+.mic-selector label {
+    font-size: 13px;
+    color: #888;
+    display: block;
+    margin-bottom: 6px;
+}
+.mic-selector select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #333350;
+    border-radius: 10px;
+    background: #252538;
+    color: #ccc;
+    font-size: 14px;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    cursor: pointer;
+}
+.mic-selector select:focus {
+    border-color: #4f46e5;
+}
+
+.btn-mic-test {
+    margin-top: 12px;
+    padding: 8px 16px;
+    font-size: 13px;
+    background: #252538;
+    color: #ccc;
+    border: 1px solid #333350;
+}
+.btn-mic-test.active {
+    background: #16a34a;
+    color: #fff;
+    border-color: #16a34a;
+}
+
+/* ── Input fields ── */
+input[type="text"] {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #333350;
+    border-radius: 10px;
+    background: #252538;
+    color: #eee;
+    font-size: 15px;
+    outline: none;
+    margin-bottom: 12px;
+}
+input[type="text"]:focus {
+    border-color: #4f46e5;
+}
+input[type="text"]::placeholder {
+    color: #555;
+}
+
+.form-label {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 8px;
+}
+
+/* ── Back button (arrow) ── */
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #888;
+    font-size: 13px;
+    cursor: pointer;
+    margin-top: 16px;
+    text-align: center;
+    background: none;
+    border: none;
+    padding: 6px 0;
+    align-self: center;
+}
+.back-btn:hover { color: #aaa; opacity: 1; }
+.back-btn svg {
+    vertical-align: middle;
+}
+
+/* ── Room header ── */
+.room-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+.room-header h2 {
+    font-size: 18px;
+    font-weight: 600;
+}
+.room-peer-count {
+    font-size: 13px;
+    color: #888;
+}
+
+/* ── Room subtitle (code + copy) ── */
+.room-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.room-subtitle code {
+    font-size: 13px;
+    color: #666;
+    letter-spacing: 1px;
+}
+.room-subtitle .copy-btn {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.room-subtitle .copy-btn:hover { color: #4f46e5; opacity: 1; }
+
+.status-text {
+    color: #888;
+    font-size: 13px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+}
+.status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    background: #888;
+    flex-shrink: 0;
+}
+.status-dot.connecting { background: #f59e0b; }
+.status-dot.connected { background: #22c55e; }
+.status-dot.error { background: #ef4444; }
+
+.room-divider {
+    height: 1px;
+    background: #2a2a40;
+    margin-bottom: 12px;
+}
+
+/* ── Room controls ── */
+.room-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-top: auto;
+    padding-bottom: 4px;
+}
+
+.btn-mute-circle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 2px solid #333350;
+    background: #252538;
+    color: #ccc;
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    padding: 0;
+}
+.btn-mute-circle:hover { border-color: #4f46e5; opacity: 1; }
+.btn-mute-circle.muted {
+    background: #dc2626;
+    border-color: #dc2626;
+    color: #fff;
+}
+
+.btn-leave-circle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 2px solid #333350;
+    background: #252538;
+    color: #ccc;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    padding: 0;
+}
+.btn-leave-circle:hover {
+    background: #dc2626;
+    border-color: #dc2626;
+    color: #fff;
+    opacity: 1;
+}
+
+/* ── Participant list ── */
+.participant-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.participant-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 4px;
+    font-size: 14px;
+    color: #ccc;
+}
+
+.avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #333350;
+    color: #a5b4fc;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    text-transform: uppercase;
+}
+
+.participant-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+}
+.peer-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.you-tag {
+    font-size: 11px;
+    color: #888;
+}
+.host-crown {
+    font-size: 14px;
+    flex-shrink: 0;
+    color: #f59e0b;
+    display: inline-flex;
+    align-items: center;
+}
+
+.participant-actions {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+.participant-actions button {
+    padding: 4px 10px;
+    font-size: 11px;
+    border-radius: 6px;
+}
+.btn-kick {
+    background: #dc2626;
+    color: #fff;
+}
+.btn-force-mute {
+    background: #f59e0b;
+    color: #1a1a2e;
+}
+
+/* ── Host controls ── */
+.host-controls {
+    margin-bottom: 12px;
+}
+
+.btn-lock {
+    padding: 8px 16px;
+    font-size: 13px;
+    background: #252538;
+    color: #ccc;
+    border: 1px solid #333350;
+    width: 100%;
+}
+.btn-lock.locked {
+    background: #f59e0b;
+    color: #1a1a2e;
+    border-color: #f59e0b;
+}
+
+/* ── Force-mute notice ── */
+.notice-banner {
+    display: none;
+    background: #f59e0b;
+    color: #1a1a2e;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: center;
+    padding: 8px 16px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+.notice-banner.visible { display: block; }
+
+/* ── Settings display name ── */
+.setting-group {
+    margin-bottom: 12px;
+}
+.setting-label {
+    font-size: 13px;
+    color: #888;
+    display: block;
+    margin-bottom: 6px;
+}
+.setting-group input[type="text"] {
+    margin-bottom: 0;
+}
+
+/* ── Join password field ── */
+.password-group {
+    margin-bottom: 4px;
+}
+.password-hint {
+    color: #f59e0b;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+/* ── Host password row ── */
+.password-row {
+    display: flex;
+    gap: 8px;
+}
+.input-room-password {
+    flex: 1;
+    margin-bottom: 0 !important;
+}
+.password-row .btn-lock {
+    width: auto;
+    white-space: nowrap;
+}
