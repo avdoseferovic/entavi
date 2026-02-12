@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entavi</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .container {
+            padding: 28px 28px 24px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            margin-bottom: 24px;
+        }
+        header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        header .subtitle {
+            color: #666;
+            font-size: 13px;
+        }
+
+        .view { display: none; flex-direction: column; flex: 1; }
+        .view.active { display: flex; }
+
+        /* ── Buttons ── */
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+        button:hover { opacity: 0.85; }
+        button:active { opacity: 0.7; }
+
+        .btn-primary {
+            background: #4f46e5;
+            color: #fff;
+        }
+        .btn-secondary {
+            background: #252538;
+            color: #ccc;
+            border: 1px solid #333350;
+        }
+        .btn-danger {
+            background: #dc2626;
+            color: #fff;
+        }
+
+        /* ── Action row (Create / Join side by side) ── */
+        .action-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .action-row button {
+            flex: 1;
+            padding: 14px 16px;
+            font-size: 15px;
+        }
+
+        /* ── Settings section ── */
+        .section-divider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .section-divider span {
+            color: #555;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+        .section-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #2a2a40;
+        }
+
+        .mic-selector label {
+            font-size: 13px;
+            color: #888;
+            display: block;
+            margin-bottom: 6px;
+        }
+        .mic-selector select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #333350;
+            border-radius: 10px;
+            background: #252538;
+            color: #ccc;
+            font-size: 14px;
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            cursor: pointer;
+        }
+        .mic-selector select:focus {
+            border-color: #4f46e5;
+        }
+
+        .btn-mic-test {
+            margin-top: 12px;
+            padding: 8px 16px;
+            font-size: 13px;
+            background: #252538;
+            color: #ccc;
+            border: 1px solid #333350;
+        }
+        .btn-mic-test.active {
+            background: #16a34a;
+            color: #fff;
+            border-color: #16a34a;
+        }
+
+        /* ── Input fields ── */
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #333350;
+            border-radius: 10px;
+            background: #252538;
+            color: #eee;
+            font-size: 15px;
+            outline: none;
+            margin-bottom: 12px;
+        }
+        input[type="text"]:focus {
+            border-color: #4f46e5;
+        }
+        input[type="text"]::placeholder {
+            color: #555;
+        }
+
+        .form-label {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+
+        /* ── Back button (arrow) ── */
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: #888;
+            font-size: 13px;
+            cursor: pointer;
+            margin-top: 16px;
+            text-align: center;
+            background: none;
+            border: none;
+            padding: 6px 0;
+            align-self: center;
+        }
+        .back-btn:hover { color: #aaa; opacity: 1; }
+        .back-btn .arrow {
+            font-size: 16px;
+            line-height: 1;
+        }
+
+        /* ── Room card ── */
+        .room-card {
+            background: #222238;
+            border-radius: 14px;
+            padding: 22px;
+            margin-bottom: 16px;
+        }
+        .room-card h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .room-id {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .room-id .label {
+            color: #666;
+            font-size: 13px;
+        }
+        .room-id code {
+            background: #1a1a2e;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #a5b4fc;
+            letter-spacing: 1px;
+        }
+        .room-id .copy-btn {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-size: 13px;
+            padding: 4px 8px;
+        }
+        .room-id .copy-btn:hover { color: #4f46e5; opacity: 1; }
+
+        .status-text {
+            color: #888;
+            font-size: 13px;
+            margin-top: 14px;
+        }
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+            background: #888;
+        }
+        .status-dot.connecting { background: #f59e0b; }
+        .status-dot.connected { background: #22c55e; }
+        .status-dot.error { background: #ef4444; }
+
+        .peer-count {
+            font-size: 13px;
+            color: #a5b4fc;
+            margin-top: 8px;
+        }
+
+        .mic-indicator {
+            font-size: 12px;
+            color: #555;
+            margin-bottom: 16px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ── Room controls ── */
+        .room-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-top: auto;
+            padding-bottom: 4px;
+        }
+
+        .btn-mute-circle {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: 2px solid #333350;
+            background: #252538;
+            color: #ccc;
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s;
+            padding: 0;
+        }
+        .btn-mute-circle:hover { border-color: #4f46e5; opacity: 1; }
+        .btn-mute-circle.muted {
+            background: #dc2626;
+            border-color: #dc2626;
+            color: #fff;
+        }
+
+        .btn-leave-text {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 8px;
+        }
+        .btn-leave-text:hover { color: #ef4444; background: rgba(239, 68, 68, 0.1); opacity: 1; }
+
+        /* ── Host badge ── */
+        .host-badge {
+            display: inline-block;
+            background: #4f46e5;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 6px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        /* ── Participant list ── */
+        .participant-list {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 12px;
+            max-height: 140px;
+            overflow-y: auto;
+        }
+        .participant-list.visible { display: flex; }
+
+        .participant-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #252538;
+            border: 1px solid #333350;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 13px;
+            color: #ccc;
+        }
+        .participant-item .peer-label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+            min-width: 0;
+        }
+        .participant-actions {
+            display: flex;
+            gap: 6px;
+            margin-left: 8px;
+            flex-shrink: 0;
+        }
+        .participant-actions button {
+            padding: 4px 10px;
+            font-size: 11px;
+            border-radius: 6px;
+        }
+        .btn-kick {
+            background: #dc2626;
+            color: #fff;
+        }
+        .btn-force-mute {
+            background: #f59e0b;
+            color: #1a1a2e;
+        }
+
+        /* ── Host controls ── */
+        .host-controls {
+            display: none;
+            margin-bottom: 12px;
+        }
+        .host-controls.visible { display: block; }
+
+        .btn-lock {
+            padding: 8px 16px;
+            font-size: 13px;
+            background: #252538;
+            color: #ccc;
+            border: 1px solid #333350;
+            width: 100%;
+        }
+        .btn-lock.locked {
+            background: #f59e0b;
+            color: #1a1a2e;
+            border-color: #f59e0b;
+        }
+
+        /* ── Force-mute notice ── */
+        .notice-banner {
+            display: none;
+            background: #f59e0b;
+            color: #1a1a2e;
+            font-size: 13px;
+            font-weight: 500;
+            text-align: center;
+            padding: 8px 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+        .notice-banner.visible { display: block; }
+
+        /* ── Settings display name ── */
+        .setting-group {
+            margin-bottom: 12px;
+        }
+        .setting-label {
+            font-size: 13px;
+            color: #888;
+            display: block;
+            margin-bottom: 6px;
+        }
+        .setting-group input[type="text"] {
+            margin-bottom: 0;
+        }
+
+        /* ── Join password field ── */
+        .password-group {
+            margin-bottom: 4px;
+        }
+        .password-hint {
+            color: #f59e0b;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        /* ── Host password row ── */
+        .password-row {
+            display: flex;
+            gap: 8px;
+        }
+        .input-room-password {
+            flex: 1;
+            margin-bottom: 0 !important;
+        }
+        .password-row .btn-lock {
+            width: auto;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Entavi</h1>
+            <p class="subtitle">Peer-to-peer voice calls</p>
+        </header>
+
+        <!-- Home view -->
+        <div id="view-home" class="view active">
+            <div class="action-row">
+                <button class="btn-primary" id="btn-create">Create Room</button>
+                <button class="btn-secondary" id="btn-join">Join Room</button>
+            </div>
+
+            <div class="section-divider"><span>Settings</span></div>
+
+            <div class="setting-group">
+                <label for="input-display-name" class="setting-label">Display name</label>
+                <input type="text" id="input-display-name" placeholder="Your name" />
+            </div>
+
+            <div class="mic-selector">
+                <label for="select-mic">Microphone</label>
+                <select id="select-mic">
+                    <option value="">System Default</option>
+                </select>
+                <button class="btn-mic-test" id="btn-mic-test">Test Mic</button>
+            </div>
+        </div>
+
+        <!-- Create room view -->
+        <div id="view-create" class="view">
+            <p class="form-label">Room name</p>
+            <input type="text" id="input-room-name" placeholder="e.g. Team Standup" autofocus />
+            <button class="btn-primary" id="btn-do-create">Create</button>
+            <button class="back-btn" id="btn-back-create"><span class="arrow">&larr;</span> Back</button>
+        </div>
+
+        <!-- Join room view -->
+        <div id="view-join" class="view">
+            <p class="form-label">Room ID</p>
+            <input type="text" id="input-room-id" placeholder="e.g. a1b2c3" autofocus />
+            <div id="join-password-group" class="password-group" style="display:none;">
+                <p class="form-label password-hint">This room is password-protected</p>
+                <input type="text" id="input-join-password" placeholder="Room password" />
+            </div>
+            <button class="btn-primary" id="btn-do-join">Join</button>
+            <button class="back-btn" id="btn-back-join"><span class="arrow">&larr;</span> Back</button>
+        </div>
+
+        <!-- In-room view -->
+        <div id="view-room" class="view">
+            <div class="room-card">
+                <h2 id="room-title"></h2>
+                <div class="room-id">
+                    <span class="label">Code:</span>
+                    <code id="room-id-display"></code>
+                    <span class="copy-btn" id="btn-copy-id" title="Copy to clipboard">Copy</span>
+                </div>
+                <p class="status-text" id="room-status"><span class="status-dot connecting"></span>Connecting...</p>
+                <p class="peer-count" id="peer-count"></p>
+            </div>
+            <div class="notice-banner" id="notice-banner">You were muted by the host</div>
+            <div class="participant-list" id="participant-list"></div>
+            <div class="host-controls" id="host-controls">
+                <div class="password-row">
+                    <input type="text" id="input-room-password" placeholder="Room password" class="input-room-password" />
+                    <button class="btn-lock" id="btn-set-password">Set Password</button>
+                </div>
+            </div>
+            <p class="mic-indicator" id="mic-indicator"></p>
+            <div class="room-controls">
+                <button class="btn-mute-circle" id="btn-mute" title="Toggle mute">&#x1F399;</button>
+                <button class="btn-leave-text" id="btn-leave">Leave Room</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

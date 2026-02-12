@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+signaling-server/node_modules/
+
+# Build output
+target/
+dist/
+gen/
+
+# OS files
+.DS_Store
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment / secrets
+.env
+.env.*
+.wrangler/
