@@ -214,6 +214,9 @@ fn main() {
                 }
             });
 
+            // Show the window on launch
+            show_window(app.handle());
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

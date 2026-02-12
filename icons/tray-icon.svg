@@ -1,0 +1,11 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Speech bubble outline -->
+  <path d="M512 100C290 100 110 260 110 460c0 115 65 217 167 282l-48 150c-4 13 10 24 22 17l174-97c27 6 56 10 87 10 222 0 402-160 402-362S734 100 512 100z" fill="black"/>
+
+  <!-- Inner cutout (white = transparent in template) -->
+  <path d="M512 185C336 185 195 305 195 460c0 90 52 170 134 222l-30 94 110-62c24 5 48 8 73 8h30c166 0 302-110 302-262S688 185 512 185z" fill="white"/>
+
+  <!-- Audio waveform -->
+  <path d="M320 460 L400 460 L430 385 L465 535 L505 365 L545 555 L575 405 L615 515 L645 435 L685 460 L720 460"
+    stroke="black" stroke-width="38" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
