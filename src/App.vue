@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
 import type { UnlistenFn } from '@tauri-apps/api/event'
+import { check } from '@tauri-apps/plugin-updater'
+import { relaunch } from '@tauri-apps/plugin-process'
 import { useAppState } from './composables/useAppState'
 import { useTauri } from './composables/useTauri'
 import { setupListeners } from './composables/useTauriEvents'
@@ -95,6 +97,31 @@ onMounted(async () => {
 
   unlisteners = await setupListeners()
   window.addEventListener('entavi:tray-toggle-mute', onTrayToggleMute)
+
+  // Check for updates (non-blocking)
+  try {
+    const update = await check()
+    if (update) {
+      console.log(`Update available: ${update.version}`)
+      await update.downloadAndInstall((event) => {
+        switch (event.event) {
+          case 'Started':
+            console.log(`Downloading update ${update.version}, size: ${event.data.contentLength} bytes`)
+            break
+          case 'Progress':
+            console.log(`Downloaded ${event.data.chunkLength} bytes`)
+            break
+          case 'Finished':
+            console.log('Download finished')
+            break
+        }
+      })
+      console.log('Update installed, relaunching...')
+      await relaunch()
+    }
+  } catch (e) {
+    console.error('Update check failed:', e)
+  }
 })
 
 onUnmounted(() => {
