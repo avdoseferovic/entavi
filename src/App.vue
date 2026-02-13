@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import type { UnlistenFn } from '@tauri-apps/api/event'
+import { getVersion } from '@tauri-apps/api/app'
 import { check } from '@tauri-apps/plugin-updater'
 import { relaunch } from '@tauri-apps/plugin-process'
 import { useAppState } from './composables/useAppState'
@@ -13,6 +14,7 @@ import RoomView from './components/RoomView.vue'
 
 const { state, resetRoomState, setStatus, getDisplayName } = useAppState()
 const tauri = useTauri()
+const appVersion = ref('')
 
 let unlisteners: UnlistenFn[] = []
 
@@ -79,6 +81,8 @@ function onTrayToggleMute() {
 }
 
 onMounted(async () => {
+  appVersion.value = await getVersion()
+
   // Restore persisted settings from localStorage
   const savedName = localStorage.getItem('entavi:displayName')
   if (savedName) state.displayName = savedName
@@ -135,6 +139,7 @@ onUnmounted(() => {
     <header v-if="state.currentView === 'home'">
       <h1>Entavi</h1>
       <p class="subtitle">Peer-to-peer voice calls</p>
+      <p v-if="appVersion" class="version">v{{ appVersion }}</p>
     </header>
 
     <HomeView
