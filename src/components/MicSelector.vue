@@ -31,6 +31,7 @@ async function toggleMicTest() {
   if (state.isMicTesting) {
     await tauri.stopMicTest()
     state.isMicTesting = false
+    state.micTestLevel = 0
   } else {
     try {
       await tauri.startMicTest()
@@ -64,5 +65,8 @@ onMounted(loadDevices)
     >
       {{ state.isMicTesting ? 'Stop Test' : 'Test Mic' }}
     </button>
+    <div class="mic-level-meter">
+      <div class="mic-level-bar" :style="{ width: state.isMicTesting ? (state.micTestLevel * 100) + '%' : '0%' }" />
+    </div>
   </div>
 </template>

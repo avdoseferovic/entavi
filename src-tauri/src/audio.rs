@@ -9,41 +9,52 @@ use ringbuf::{
     HeapRb,
 };
 
-use crate::types::{AudioDevice, EncodedFrame, FRAME_SIZE, SAMPLE_RATE};
+use tauri::{AppHandle, Emitter};
+
+use crate::types::{AudioDevice, EncodedFrame, FRAME_SIZE, SAMPLE_RATE, EVENT_MIC_TEST_LEVEL};
 
 // ── AudioCapture ──
 
 pub struct AudioCapture {
     muted: Arc<AtomicBool>,
+    speaking: Arc<AtomicBool>,
     pub encoded_rx: flume::Receiver<EncodedFrame>,
 }
 
 impl AudioCapture {
-    pub fn new(device_name: Option<String>) -> Result<Self> {
+    pub fn new(device_name: Option<String>, noise_suppression: Arc<AtomicBool>) -> Result<Self> {
         let muted = Arc::new(AtomicBool::new(false));
+        let speaking = Arc::new(AtomicBool::new(false));
         let (encoded_tx, encoded_rx) = flume::unbounded::<EncodedFrame>();
         let muted_flag = Arc::clone(&muted);
+        let speaking_flag = Arc::clone(&speaking);
 
         std::thread::Builder::new()
             .name("audio-capture".into())
             .spawn(move || {
-                if let Err(e) = run_capture(device_name, muted_flag, encoded_tx) {
+                if let Err(e) = run_capture(device_name, muted_flag, speaking_flag, encoded_tx, noise_suppression) {
                     tracing::error!("Audio capture thread error: {e}");
                 }
             })?;
 
-        Ok(Self { muted, encoded_rx })
+        Ok(Self { muted, speaking, encoded_rx })
     }
 
     pub fn set_muted(&self, muted: bool) {
         self.muted.store(muted, Ordering::Relaxed);
+    }
+
+    pub fn is_speaking(&self) -> bool {
+        self.speaking.load(Ordering::Relaxed)
     }
 }
 
 fn run_capture(
     device_name: Option<String>,
     muted: Arc<AtomicBool>,
+    speaking: Arc<AtomicBool>,
     encoded_tx: flume::Sender<EncodedFrame>,
+    noise_suppression: Arc<AtomicBool>,
 ) -> Result<()> {
     let host = cpal::default_host();
     let device = if let Some(ref name) = device_name {
@@ -168,20 +179,26 @@ fn run_capture(
         }
 
         // Step 3: Noise suppression (two 480-sample frames per 960-sample Opus frame)
-        for chunk_idx in 0..2 {
-            let offset = chunk_idx * DENOISE_FRAME;
-            for i in 0..DENOISE_FRAME {
-                // nnnoiseless expects i16-range floats [-32768, 32767]
-                denoise_in[i] = mono_48k_buf[offset + i] * 32767.0;
-            }
-            denoise.process_frame(&mut denoise_out, &denoise_in);
-            for i in 0..DENOISE_FRAME {
-                // Convert back to [-1.0, 1.0]
-                mono_48k_buf[offset + i] = denoise_out[i] / 32767.0;
+        if noise_suppression.load(Ordering::Relaxed) {
+            for chunk_idx in 0..2 {
+                let offset = chunk_idx * DENOISE_FRAME;
+                for i in 0..DENOISE_FRAME {
+                    // nnnoiseless expects i16-range floats [-32768, 32767]
+                    denoise_in[i] = mono_48k_buf[offset + i] * 32767.0;
+                }
+                denoise.process_frame(&mut denoise_out, &denoise_in);
+                for i in 0..DENOISE_FRAME {
+                    // Convert back to [-1.0, 1.0]
+                    mono_48k_buf[offset + i] = denoise_out[i] / 32767.0;
+                }
             }
         }
 
-        // Step 4: Opus encode
+        // Step 4: Voice activity detection (after denoising)
+        let peak = mono_48k_buf.iter().map(|s| s.abs()).fold(0.0f32, f32::max);
+        speaking.store(peak > 0.01, Ordering::Relaxed);
+
+        // Step 5: Opus encode
         match encoder.encode_float(&mono_48k_buf, &mut opus_buf) {
             Ok(len) => {
                 let frame = EncodedFrame {
@@ -258,14 +275,14 @@ pub struct MicTest {
 }
 
 impl MicTest {
-    pub fn new(device_name: Option<String>) -> Result<Self> {
+    pub fn new(device_name: Option<String>, app: AppHandle, noise_suppression: Arc<AtomicBool>) -> Result<Self> {
         let stop = Arc::new(AtomicBool::new(false));
         let stop_flag = Arc::clone(&stop);
 
         std::thread::Builder::new()
             .name("mic-test".into())
             .spawn(move || {
-                if let Err(e) = run_mic_test(device_name, stop_flag) {
+                if let Err(e) = run_mic_test(device_name, stop_flag, app, noise_suppression) {
                     tracing::error!("Mic test error: {e}");
                 }
             })?;
@@ -284,7 +301,7 @@ impl Drop for MicTest {
     }
 }
 
-fn run_mic_test(device_name: Option<String>, stop: Arc<AtomicBool>) -> Result<()> {
+fn run_mic_test(device_name: Option<String>, stop: Arc<AtomicBool>, app: AppHandle, noise_suppression: Arc<AtomicBool>) -> Result<()> {
     let host = cpal::default_host();
 
     // ── Input device ──
@@ -386,6 +403,7 @@ fn run_mic_test(device_name: Option<String>, stop: Arc<AtomicBool>) -> Result<()
     let mut mono_48k = vec![0.0f32; FRAME_SIZE];
     let mut opus_buf = vec![0u8; 4000];
     let mut decoded_buf = vec![0.0f32; FRAME_SIZE];
+    let mut level_counter: u32 = 0;
 
     while !stop.load(Ordering::Relaxed) {
         if consumer.occupied_len() < device_frame_samples {
@@ -424,16 +442,26 @@ fn run_mic_test(device_name: Option<String>, stop: Arc<AtomicBool>) -> Result<()
             }
         }
 
-        // Noise suppression
-        for chunk_idx in 0..2 {
-            let offset = chunk_idx * DENOISE_FRAME;
-            for i in 0..DENOISE_FRAME {
-                denoise_in[i] = mono_48k[offset + i] * 32767.0;
+        // Noise suppression (conditional)
+        if noise_suppression.load(Ordering::Relaxed) {
+            for chunk_idx in 0..2 {
+                let offset = chunk_idx * DENOISE_FRAME;
+                for i in 0..DENOISE_FRAME {
+                    denoise_in[i] = mono_48k[offset + i] * 32767.0;
+                }
+                denoise.process_frame(&mut denoise_out, &denoise_in);
+                for i in 0..DENOISE_FRAME {
+                    mono_48k[offset + i] = denoise_out[i] / 32767.0;
+                }
             }
-            denoise.process_frame(&mut denoise_out, &denoise_in);
-            for i in 0..DENOISE_FRAME {
-                mono_48k[offset + i] = denoise_out[i] / 32767.0;
-            }
+        }
+
+        // Emit level event (~every 50ms = every 2-3 frames at 20ms/frame)
+        level_counter += 1;
+        if level_counter >= 3 {
+            level_counter = 0;
+            let peak = mono_48k.iter().map(|s| s.abs()).fold(0.0f32, f32::max).clamp(0.0, 1.0);
+            let _ = app.emit(EVENT_MIC_TEST_LEVEL, peak);
         }
 
         // Opus encode

@@ -9,9 +9,16 @@ const state = reactive({
   isMuted: false,
   selectedMic: null as string | null,
   isMicTesting: false,
+  noiseSuppression: true,
+  micTestLevel: 0,
   isHost: false,
   isRoomLocked: false,
   peerList: new Map<string, string>(),
+  hostPeerId: null as string | null,
+  speakingPeers: new Set<string>(),
+  selfSpeaking: false,
+  mutedPeers: new Set<string>(),
+  signalingUrl: '',
   isJoining: false,
   joinPasswordNeeded: false,
   roomNotFound: false,
@@ -46,6 +53,10 @@ function resetRoomState() {
   state.isHost = false
   state.isRoomLocked = false
   state.peerList = new Map()
+  state.hostPeerId = null
+  state.speakingPeers = new Set()
+  state.selfSpeaking = false
+  state.mutedPeers = new Set()
   state.isJoining = false
   state.noticeBannerVisible = false
   state.roomNotFound = false

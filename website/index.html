@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entavi — Free, Private, P2P Voice Chat</title>
+  <meta name="description" content="Entavi is a peer-to-peer encrypted voice chat app. Create a room, share the code, and talk — no accounts, no servers routing your audio.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-primary: #0a0a14;
+      --bg-secondary: #12121f;
+      --bg-card: #16162a;
+      --bg-card-hover: #1c1c36;
+      --text-primary: #f0f0f5;
+      --text-secondary: #9595b0;
+      --accent: #6c63ff;
+      --accent-light: #8b84ff;
+      --accent-glow: rgba(108, 99, 255, 0.15);
+      --border: #2a2a44;
+      --radius: 12px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: var(--accent-light); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: rgba(10, 10, 20, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+
+    .nav-logo svg { width: 32px; height: 32px; }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--text-primary); text-decoration: none; }
+
+    .nav-github {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mobile-menu-btn {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    /* Hero */
+    .hero {
+      padding: 160px 24px 100px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-content {
+      max-width: 720px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 28px;
+    }
+
+    .hero-badge span { color: var(--accent-light); font-weight: 600; }
+
+    h1 {
+      font-size: 3.5rem;
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+
+    h1 .accent { color: var(--accent-light); }
+
+    .hero-sub {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 540px;
+      margin: 0 auto 40px;
+      line-height: 1.7;
+    }
+
+    .download-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 24px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      border: none;
+    }
+
+    .btn:hover { text-decoration: none; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover { background: var(--accent-light); transform: translateY(-1px); }
+
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover { background: var(--bg-card-hover); border-color: #3a3a5a; transform: translateY(-1px); }
+
+    .btn svg { width: 20px; height: 20px; }
+
+    .hero-note {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      opacity: 0.7;
+    }
+
+    /* App preview */
+    .app-preview {
+      max-width: 380px;
+      margin: 60px auto 0;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    }
+
+    .preview-titlebar {
+      height: 42px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 8px;
+    }
+
+    .preview-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .preview-dot.red { background: #ff5f57; }
+    .preview-dot.yellow { background: #ffbd2e; }
+    .preview-dot.green { background: #28ca41; }
+
+    .preview-body {
+      padding: 24px 20px 20px;
+      text-align: left;
+    }
+
+    /* Room header row */
+    .preview-room-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .preview-room-name {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .preview-room-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.75rem;
+    }
+
+    .preview-ping {
+      color: #22c55e;
+      font-weight: 500;
+    }
+
+    .preview-people {
+      color: var(--text-secondary);
+    }
+
+    /* Room code row */
+    .preview-code-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .preview-code-row code {
+      font-size: 0.78rem;
+      color: #666;
+      letter-spacing: 0.5px;
+    }
+
+    .preview-copy-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 0.7rem;
+      color: #666;
+      cursor: default;
+    }
+
+    .preview-copy-btn svg { width: 12px; height: 12px; }
+
+    .preview-divider {
+      height: 1px;
+      background: #2a2a44;
+      margin-bottom: 14px;
+    }
+
+    /* Participant list — vertical like actual app */
+    .preview-participants {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .preview-participant {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .p-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #333350;
+      color: #a5b4fc;
+      font-size: 0.78rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      text-transform: uppercase;
+      border: 2px solid transparent;
+      transition: border-color 0.2s, box-shadow 0.2s, opacity 0.2s;
+    }
+
+    .p-avatar.speaking {
+      border-color: #22c55e;
+      box-shadow: 0 0 10px rgba(34, 197, 94, 0.3);
+    }
+
+    .p-avatar.muted {
+      opacity: 0.5;
+      border-color: transparent;
+    }
+
+    .p-info {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+      font-size: 0.88rem;
+      color: #ccc;
+    }
+
+    .p-you-tag {
+      font-size: 0.7rem;
+      color: #888;
+    }
+
+    .p-host-crown {
+      color: #f59e0b;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .p-host-crown svg { width: 16px; height: 16px; }
+
+    .p-muted-icon {
+      color: #ef4444;
+      display: inline-flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .p-muted-icon svg { width: 16px; height: 16px; }
+
+    .p-actions {
+      display: flex;
+      gap: 5px;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .p-btn {
+      padding: 4px 10px;
+      font-size: 0.68rem;
+      font-weight: 500;
+      border-radius: 6px;
+      border: none;
+      cursor: default;
+    }
+
+    .p-btn-mute {
+      background: #f59e0b;
+      color: #1a1a2e;
+    }
+
+    .p-btn-kick {
+      background: #dc2626;
+      color: #fff;
+    }
+
+    /* Host controls (password row) */
+    .preview-host-controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .preview-pw-input {
+      flex: 1;
+      padding: 9px 12px;
+      border: 1px solid #333350;
+      border-radius: 10px;
+      background: #252538;
+      color: #555;
+      font-size: 0.78rem;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .preview-pw-btn {
+      padding: 9px 16px;
+      border: 1px solid #333350;
+      border-radius: 10px;
+      background: #252538;
+      color: #ccc;
+      font-size: 0.78rem;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: default;
+      white-space: nowrap;
+    }
+
+    /* Bottom controls */
+    .preview-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding-top: 4px;
+    }
+
+    .preview-ctrl-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 2px solid #333350;
+      background: #252538;
+      color: #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: default;
+    }
+
+    .preview-ctrl-btn svg { width: 20px; height: 20px; }
+
+    /* Sections */
+    section { padding: 100px 24px; }
+
+    .section-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent-light);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: 2.2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+
+    .section-desc {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin-bottom: 48px;
+    }
+
+    /* Features */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      transition: all 0.2s;
+    }
+
+    .feature-card:hover {
+      border-color: #3a3a5a;
+      background: var(--bg-card-hover);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: var(--accent-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    .feature-icon svg { width: 22px; height: 22px; color: var(--accent-light); }
+
+    .feature-card h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .feature-card p {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* How It Works */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 64px;
+    }
+
+    .step {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      position: relative;
+    }
+
+    .step-number {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .step h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .step p {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* Architecture diagram */
+    .architecture {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 48px;
+      text-align: center;
+    }
+
+    .arch-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .arch-node {
+      padding: 20px 28px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      text-align: center;
+      min-width: 140px;
+    }
+
+    .arch-node.peer { border-color: var(--accent); }
+
+    .arch-node h4 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .arch-node p {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .arch-arrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+    }
+
+    .arch-arrow.encrypted { color: #28ca41; }
+
+    .arch-arrow svg { width: 32px; height: 16px; }
+
+    .arch-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .arch-signal-section {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .arch-signal-section p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .arch-signal-section strong { color: var(--text-primary); }
+
+    /* Security */
+    .security-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+    }
+
+    .security-list { list-style: none; }
+
+    .security-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .security-list li:last-child { border-bottom: none; }
+
+    .security-check {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(40, 202, 65, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .security-check svg { width: 14px; height: 14px; color: #28ca41; }
+
+    .security-list li span {
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .tech-stack { margin-top: 16px; }
+
+    .tech-stack h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .tech-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tech-tag {
+      padding: 8px 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* Deploy guide */
+    .deploy-steps {
+      max-width: 720px;
+    }
+
+    .deploy-step {
+      display: flex;
+      gap: 16px;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .deploy-step:last-child { border-bottom: none; }
+
+    .deploy-step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .deploy-step-content h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .deploy-step-content p {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .deploy-step-content code {
+      font-size: 0.85rem;
+      background: var(--bg-card);
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      color: var(--accent-light);
+    }
+
+    /* FAQ */
+    .faq-list {
+      max-width: 720px;
+    }
+
+    .faq-item {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .faq-question {
+      width: 100%;
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      text-align: left;
+      padding: 20px 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .faq-question:hover { color: var(--accent-light); }
+
+    .faq-chevron {
+      width: 20px;
+      height: 20px;
+      color: var(--text-secondary);
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+
+    .faq-item.open .faq-chevron { transform: rotate(180deg); }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .faq-answer-inner {
+      padding: 0 0 20px;
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    .faq-item.open .faq-answer { max-height: 300px; }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 60px 24px;
+    }
+
+    .footer-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+
+    .footer-brand { max-width: 360px; }
+
+    .footer-brand .nav-logo { margin-bottom: 12px; }
+
+    .footer-brand p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 48px;
+    }
+
+    .footer-col h4 {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .footer-col ul { list-style: none; }
+
+    .footer-col li { margin-bottom: 10px; }
+
+    .footer-col a {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      transition: color 0.2s;
+    }
+
+    .footer-col a:hover { color: var(--text-primary); text-decoration: none; }
+
+    .footer-bottom {
+      max-width: 1100px;
+      margin: 40px auto 0;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      opacity: 0.7;
+    }
+
+    /* Legal notice */
+    .legal {
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      padding: 40px 24px;
+    }
+
+    .legal-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .legal h3 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text-secondary);
+    }
+
+    .legal p {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      opacity: 0.7;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .mobile-menu-btn { display: block; }
+
+      .nav-links.open {
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        top: 64px;
+        left: 0;
+        right: 0;
+        background: var(--bg-primary);
+        border-bottom: 1px solid var(--border);
+        padding: 24px;
+        gap: 20px;
+      }
+
+      h1 { font-size: 2.2rem; }
+      .hero { padding: 120px 24px 60px; }
+      .hero-sub { font-size: 1rem; }
+
+      .features-grid,
+      .steps { grid-template-columns: 1fr; }
+
+      .security-content { grid-template-columns: 1fr; }
+
+      .arch-diagram { flex-direction: column; }
+
+      .footer-inner { flex-direction: column; }
+      .footer-links { flex-direction: column; gap: 32px; }
+
+      section { padding: 60px 24px; }
+    }
+
+    @media (max-width: 480px) {
+      h1 { font-size: 1.8rem; }
+      .download-buttons { flex-direction: column; align-items: center; }
+      .btn { width: 100%; justify-content: center; }
+    }
+  </style>
+
+  <!-- Structured data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Entavi",
+    "applicationCategory": "CommunicationApplication",
+    "operatingSystem": "macOS, Windows, Linux",
+    "offers": { "@type": "Offer", "price": "0" },
+    "description": "Peer-to-peer encrypted voice chat. No accounts, no servers routing your audio."
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Do I need to create an account?",
+        "acceptedAnswer": { "@type": "Answer", "text": "No. Entavi requires no accounts, no registration, and no personal information. Just open the app, create or join a room, and talk." }
+      },
+      {
+        "@type": "Question",
+        "name": "Is it really peer-to-peer?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes. Audio flows directly between participants over WebRTC. The signaling server only helps peers find each other — it never touches your audio." }
+      },
+      {
+        "@type": "Question",
+        "name": "What platforms are supported?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Entavi is available for macOS (Apple Silicon), Windows, and Linux (AppImage and .deb)." }
+      },
+      {
+        "@type": "Question",
+        "name": "How many people can be in a room?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Rooms work best with small groups. Since audio is peer-to-peer, each participant connects directly to every other participant." }
+      },
+      {
+        "@type": "Question",
+        "name": "Is it encrypted?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes. All audio is encrypted using DTLS-SRTP, the standard encryption built into WebRTC. No one — not even us — can listen to your conversations." }
+      },
+      {
+        "@type": "Question",
+        "name": "Is it free?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes, completely free and open source." }
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav>
+    <div class="nav-inner">
+      <a href="#" class="nav-logo">
+        <svg width="32" height="32" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="1024" height="1024" rx="228" fill="#1a1a2e"/>
+          <path d="M512 180C326 180 175 310 175 472c0 95 56 179 143 233l-38 120c-4 13 10 24 22 17l140-78c22 5 44 8 70 8 186 0 337-130 337-300S698 180 512 180z" fill="white"/>
+          <path d="M310 460 L390 460 L420 380 L460 540 L500 360 L540 560 L570 400 L610 520 L640 430 L680 460 L720 460" stroke="#1a1a2e" stroke-width="36" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+        Entavi
+      </a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#how-it-works">How it Works</a></li>
+        <li><a href="#security">Security</a></li>
+        <li><a href="#self-host">Self-Host</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li>
+          <a href="https://github.com/avdoseferovic/entavi" class="nav-github" target="_blank" rel="noopener">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+            GitHub
+          </a>
+        </li>
+      </ul>
+      <button class="mobile-menu-btn" onclick="document.getElementById('navLinks').classList.toggle('open')" aria-label="Toggle menu">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span>v0.1.0-beta.2</span> Now available for macOS, Windows & Linux
+      </div>
+      <h1>Voice chat that's <span class="accent">free, private</span> and P2P encrypted</h1>
+      <p class="hero-sub">
+        No accounts. No servers routing your audio. Just create a room, share the code, and talk — directly and encrypted, peer-to-peer.
+      </p>
+      <div class="download-buttons">
+        <a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.0-beta.2/Entavi_0.1.0-beta.2_aarch64.dmg" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          macOS (Apple Silicon)
+        </a>
+        <a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.0-beta.2/Entavi_0.1.0-beta.2_x64-setup.exe" class="btn btn-secondary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+          Windows
+        </a>
+        <a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.0-beta.2/Entavi_0.1.0-beta.2_amd64.deb" class="btn btn-secondary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a.424.424 0 00-.11.135c-.26.268-.45.6-.663.839-.199.199-.485.267-.797.4-.313.136-.658.269-.864.68-.09.189-.136.394-.132.602 0 .199.027.4.055.536.058.399.116.728.04.97-.249.68-.28 1.145-.106 1.484.174.334.535.47.94.601.81.2 1.91.135 2.774.6.926.466 1.866.67 2.616.47.526-.116.97-.464 1.208-.946.587-.003 1.23-.269 2.26-.334.699-.058 1.574.267 2.577.2.025.134.063.198.114.333l.003.003c.391.778 1.113 1.368 1.884 1.43.868.074 1.741-.378 1.861-1.25.247-.801.103-1.378-.272-1.869-.384-.502-.819-.78-.99-1.156-.108-.24-.183-.602-.111-1.02.075-.042.158-.078.237-.128.275-.174.544-.418.763-.741.468-.689.853-1.86.775-3.518-.044-1.125-.1-2.766.413-4.72.513-1.932 1.612-4.104 4.233-5.164a.23.23 0 00.142-.201.226.226 0 00-.17-.209c-.51-.132-1.153-.199-1.79-.199-2.267 0-4.525 1.095-5.04 3.398-.177-.006-.357-.007-.538-.007-2.769 0-5.89.893-5.89.893s.55-.706 2.013-1.464c.624-.3 1.035-.726 1.276-1.191.238-.459.339-.947.399-1.384.063-.432.077-.831.077-1.148-.004-.387-.057-.771-.129-1.132-.059-.339-.123-.67-.178-.974-.085-.504-.143-.95-.136-1.339.003-.327.038-.628.147-.917.16-.423.59-.714 1.097-.758a.5.5 0 00.107-.009z"/></svg>
+          Linux (.deb)
+        </a>
+      </div>
+      <p class="hero-note">Also available as <a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.0-beta.2/Entavi_0.1.0-beta.2_amd64.AppImage">Linux AppImage</a></p>
+
+      <!-- App preview mockup -->
+      <div class="app-preview">
+        <div class="preview-titlebar">
+          <div class="preview-dot red"></div>
+          <div class="preview-dot yellow"></div>
+          <div class="preview-dot green"></div>
+          <span style="flex:1;text-align:center;font-size:0.78rem;color:var(--text-secondary);margin-right:48px;">Entavi</span>
+        </div>
+        <div class="preview-body">
+          <!-- Room header -->
+          <div class="preview-room-header">
+            <span class="preview-room-name">Standup</span>
+            <div class="preview-room-meta">
+              <span class="preview-ping">26ms</span>
+              <span class="preview-people">3 people</span>
+            </div>
+          </div>
+          <div class="preview-code-row">
+            <code>baa693</code>
+            <span class="preview-copy-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+              Copy
+            </span>
+          </div>
+          <div class="preview-divider"></div>
+
+          <!-- Participant list -->
+          <div class="preview-participants">
+            <!-- John (You) — Host, speaking -->
+            <div class="preview-participant">
+              <div class="p-avatar speaking">JO</div>
+              <div class="p-info">
+                <span>John</span>
+                <span class="p-you-tag">(You)</span>
+                <span class="p-host-crown">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M2.5 19h19v2h-19zm19.57-9.36c-.21-.8-1.04-1.28-1.84-1.06L14.67 10 12 2l-2.67 8-5.56-1.42c-.8-.21-1.63.26-1.84 1.06-.21.8.26 1.64 1.06 1.84L9 13l-1.5 6h9L15 13l6.01-1.52c.81-.2 1.28-1.04 1.06-1.84z"/></svg>
+                </span>
+              </div>
+            </div>
+            <!-- David — speaking -->
+            <div class="preview-participant">
+              <div class="p-avatar speaking">DA</div>
+              <div class="p-info">
+                <span>David</span>
+              </div>
+              <div class="p-actions">
+                <span class="p-btn p-btn-mute">Mute</span>
+                <span class="p-btn p-btn-kick">Kick</span>
+              </div>
+            </div>
+            <!-- Mike — muted -->
+            <div class="preview-participant">
+              <div class="p-avatar muted">MI</div>
+              <div class="p-info">
+                <span>Mike</span>
+              </div>
+              <span class="p-muted-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" x2="22" y1="2" y2="22"/><path d="M18.89 13.23A7.12 7.12 0 0 0 19 12v-2"/><path d="M5 10v2a7 7 0 0 0 12 5"/><path d="M15 9.34V5a3 3 0 0 0-5.68-1.33"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+              </span>
+              <div class="p-actions">
+                <span class="p-btn p-btn-mute">Mute</span>
+                <span class="p-btn p-btn-kick">Kick</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Host controls -->
+          <div class="preview-host-controls">
+            <span class="preview-pw-input">Room password</span>
+            <span class="preview-pw-btn">Set Password</span>
+          </div>
+
+          <!-- Bottom controls -->
+          <div class="preview-controls">
+            <div class="preview-ctrl-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+            </div>
+            <div class="preview-ctrl-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features">
+    <div class="section-inner">
+      <p class="section-label">Features</p>
+      <h2 class="section-title">Everything you need, nothing you don't</h2>
+      <p class="section-desc">Built for simplicity and privacy. No bloat, no tracking, no accounts.</p>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <h3>DTLS-SRTP Encryption</h3>
+          <p>All audio is encrypted end-to-end using WebRTC's built-in DTLS-SRTP. No one can intercept or listen to your conversations.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+          </div>
+          <h3>Direct P2P Audio</h3>
+          <p>Audio flows directly between you and everyone in the room. No middleman server ever touches or routes your voice data.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="m9 15 2 2 4-4"/></svg>
+          </div>
+          <h3>Self-Hostable</h3>
+          <p>Run your own signaling server on Cloudflare Workers. Point the app to your instance — full control, zero trust required.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+          </div>
+          <h3>Noise Suppression</h3>
+          <p>RNNoise cleans up background noise in real-time. Your voice comes through clearly — keyboards, fans, and ambient noise get filtered out.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <h3>Host Controls</h3>
+          <p>Room creators can kick peers, force-mute, and password-protect rooms. You control who's in and what they can do.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+          </div>
+          <h3>Cross-Platform</h3>
+          <p>Native desktop app for macOS, Windows, and Linux. Built with Tauri for a lightweight, fast experience on every platform.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section id="how-it-works" style="background: var(--bg-secondary);">
+    <div class="section-inner">
+      <p class="section-label">How it works</p>
+      <h2 class="section-title">Three steps. That's it.</h2>
+      <p class="section-desc">No sign-ups, no configuration. Getting started takes seconds.</p>
+      <div class="steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <h3>Create a Room</h3>
+          <p>Open Entavi and hit "Create Room." You'll get a unique 6-character code instantly.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <h3>Share the Code</h3>
+          <p>Send the room code to whoever you want to talk to — text it, email it, whatever works.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <h3>Talk Directly</h3>
+          <p>Once they join, audio flows directly between you. Encrypted, peer-to-peer, with no server in between.</p>
+        </div>
+      </div>
+
+      <!-- Architecture diagram -->
+      <div class="architecture">
+        <div class="arch-diagram">
+          <div class="arch-node peer">
+            <h4>Device A</h4>
+            <p>Entavi App</p>
+          </div>
+          <div class="arch-arrow encrypted">
+            <svg viewBox="0 0 48 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 8h44m0 0l-6-6m6 6l-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="arch-label" style="color: #28ca41;">WebRTC P2P (Encrypted)</span>
+            <svg viewBox="0 0 48 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="transform: scaleX(-1);">
+              <path d="M0 8h44m0 0l-6-6m6 6l-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="arch-node peer">
+            <h4>Device B</h4>
+            <p>Entavi App</p>
+          </div>
+        </div>
+        <div class="arch-signal-section">
+          <p><strong>Signaling Server</strong> (Cloudflare Workers) — only helps peers find each other. Never touches audio data.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Security -->
+  <section id="security">
+    <div class="section-inner">
+      <p class="section-label">Security</p>
+      <h2 class="section-title">Private by design</h2>
+      <p class="section-desc">Your voice never passes through our servers. We couldn't listen even if we wanted to.</p>
+      <div class="security-content">
+        <ul class="security-list">
+          <li>
+            <div class="security-check">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <span>Audio encrypted with <strong>DTLS-SRTP</strong> — standard WebRTC encryption protocol</span>
+          </li>
+          <li>
+            <div class="security-check">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <span><strong>No central server</strong> ever routes or stores your audio data</span>
+          </li>
+          <li>
+            <div class="security-check">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <span><strong>No accounts</strong> — zero personal information collected</span>
+          </li>
+          <li>
+            <div class="security-check">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <span><strong>No telemetry</strong> — the app doesn't phone home or track usage</span>
+          </li>
+          <li>
+            <div class="security-check">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <span><strong>Open source</strong> — the full codebase is public on GitHub</span>
+          </li>
+        </ul>
+        <div class="tech-stack">
+          <h3>Tech Stack</h3>
+          <div class="tech-tags">
+            <span class="tech-tag">Tauri 2.0</span>
+            <span class="tech-tag">Rust</span>
+            <span class="tech-tag">WebRTC</span>
+            <span class="tech-tag">Opus Codec</span>
+            <span class="tech-tag">RNNoise</span>
+            <span class="tech-tag">TypeScript</span>
+            <span class="tech-tag">Vue 3</span>
+            <span class="tech-tag">Vite</span>
+            <span class="tech-tag">Cloudflare Workers</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Deploy Your Own -->
+  <section id="self-host" style="background: var(--bg-secondary);">
+    <div class="section-inner">
+      <p class="section-label">Self-Host</p>
+      <h2 class="section-title">Deploy your own signaling server</h2>
+      <p class="section-desc">Run the signaling server on your own Cloudflare account. Free tier is all you need.</p>
+      <div class="deploy-steps">
+        <div class="deploy-step">
+          <div class="deploy-step-num">1</div>
+          <div class="deploy-step-content">
+            <h3>Prerequisites</h3>
+            <p>You'll need a <a href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noopener">Cloudflare account</a> (free tier works), Node.js, and npm installed.</p>
+          </div>
+        </div>
+        <div class="deploy-step">
+          <div class="deploy-step-num">2</div>
+          <div class="deploy-step-content">
+            <h3>Clone and install</h3>
+            <p>Clone the repo and install dependencies:<br><code>git clone https://github.com/avdoseferovic/entavi.git</code><br><code>cd entavi/signaling-server &amp;&amp; npm install</code></p>
+          </div>
+        </div>
+        <div class="deploy-step">
+          <div class="deploy-step-num">3</div>
+          <div class="deploy-step-content">
+            <h3>Configure</h3>
+            <p>Edit <code>wrangler.toml</code> and change the <code>name</code> field to your preferred worker name (e.g. <code>my-entavi-signaling</code>).</p>
+          </div>
+        </div>
+        <div class="deploy-step">
+          <div class="deploy-step-num">4</div>
+          <div class="deploy-step-content">
+            <h3>Deploy</h3>
+            <p>Log in to Cloudflare and deploy:<br><code>npx wrangler login</code><br><code>npm run deploy</code></p>
+          </div>
+        </div>
+        <div class="deploy-step">
+          <div class="deploy-step-num">5</div>
+          <div class="deploy-step-content">
+            <h3>Connect the app</h3>
+            <p>Copy your worker URL (e.g. <code>wss://my-entavi-signaling.your-subdomain.workers.dev/ws</code>), open Entavi, and paste it into the <strong>Signaling server</strong> field under Advanced settings.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq">
+    <div class="section-inner">
+      <p class="section-label">FAQ</p>
+      <h2 class="section-title">Frequently asked questions</h2>
+      <div class="faq-list">
+        <div class="faq-item">
+          <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+            Do I need to create an account?
+            <svg class="faq-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">No. Entavi requires no accounts, no registration, and no personal information. Just open the app, create or join a room, and talk.</div>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+            Is it really peer-to-peer?
+            <svg class="faq-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">Yes. Audio flows directly between participants over WebRTC. The signaling server only helps peers find each other — it never touches your audio. Once connected, the server could go offline and your call would continue.</div>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+            What platforms are supported?
+            <svg class="faq-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">Entavi is available for macOS (Apple Silicon), Windows (64-bit), and Linux (AppImage and .deb packages). It's a native desktop app built with Tauri, so it's fast and lightweight on every platform.</div>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+            How many people can be in a room?
+            <svg class="faq-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">Rooms work best with small groups. Since audio is peer-to-peer, each participant connects directly to every other participant. Performance depends on your network, but small group conversations work great.</div>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+            Is it encrypted?
+            <svg class="faq-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">Yes. All audio is encrypted using DTLS-SRTP, the standard encryption built into WebRTC. Since audio never passes through our servers, no one — not even us — can listen to your conversations.</div>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+            Is it free and open source?
+            <svg class="faq-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">Yes, completely free and open source. You can view the full source code, audit it, and contribute on <a href="https://github.com/avdoseferovic/entavi">GitHub</a>.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Legal -->
+  <div class="legal">
+    <div class="legal-inner">
+      <h3>Legal Notice</h3>
+      <p>Entavi is provided "as is" without warranty of any kind. While we strive to provide a secure and reliable service, we make no guarantees regarding the availability, accuracy, or security of the application. Use of Entavi is at your own risk. We are not responsible for any damages, data loss, or other liabilities arising from the use of this software. By using Entavi, you agree to these terms.</p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a href="#" class="nav-logo">
+          <svg width="32" height="32" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="1024" height="1024" rx="228" fill="#1a1a2e"/>
+            <path d="M512 180C326 180 175 310 175 472c0 95 56 179 143 233l-38 120c-4 13 10 24 22 17l140-78c22 5 44 8 70 8 186 0 337-130 337-300S698 180 512 180z" fill="white"/>
+            <path d="M310 460 L390 460 L420 380 L460 540 L500 360 L540 560 L570 400 L610 520 L640 430 L680 460 L720 460" stroke="#1a1a2e" stroke-width="36" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+          Entavi
+        </a>
+        <p>Free, private, peer-to-peer encrypted voice chat. No accounts, no servers routing your audio. Open source and built with Rust.</p>
+      </div>
+      <div class="footer-links">
+        <div class="footer-col">
+          <h4>Download</h4>
+          <ul>
+            <li><a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.0-beta.2/Entavi_0.1.0-beta.2_aarch64.dmg">macOS (Apple Silicon)</a></li>
+            <li><a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.0-beta.2/Entavi_0.1.0-beta.2_x64-setup.exe">Windows</a></li>
+            <li><a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.0-beta.2/Entavi_0.1.0-beta.2_amd64.deb">Linux (.deb)</a></li>
+            <li><a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.0-beta.2/Entavi_0.1.0-beta.2_amd64.AppImage">Linux (AppImage)</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Project</h4>
+          <ul>
+            <li><a href="https://github.com/avdoseferovic/entavi" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="https://github.com/avdoseferovic/entavi/releases" target="_blank" rel="noopener">Releases</a></li>
+            <li><a href="https://github.com/avdoseferovic/entavi/issues" target="_blank" rel="noopener">Issues</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      &copy; 2026 Entavi. Open source software.
+    </div>
+  </footer>
+
+</body>
+</html>

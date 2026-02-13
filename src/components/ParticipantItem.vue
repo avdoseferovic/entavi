@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Crown } from 'lucide-vue-next'
+import { Crown, MicOff } from 'lucide-vue-next'
 import { useAppState } from '../composables/useAppState'
 import { useTauri } from '../composables/useTauri'
 
@@ -7,6 +7,8 @@ const props = defineProps<{
   name: string
   isSelf: boolean
   isHostEntry: boolean
+  isSpeaking: boolean
+  isMutedPeer: boolean
   peerId?: string
 }>()
 
@@ -36,7 +38,9 @@ async function forceMute() {
 
 <template>
   <div class="participant-item">
-    <div class="avatar">{{ getInitials(name) }}</div>
+    <div class="avatar" :class="{ speaking: isSpeaking && !isMutedPeer, muted: isMutedPeer }">
+      {{ getInitials(name) }}
+    </div>
     <div class="participant-info">
       <span class="peer-label">{{ name }}</span>
       <span v-if="isSelf" class="you-tag">(You)</span>
@@ -44,6 +48,9 @@ async function forceMute() {
         <Crown :size="14" />
       </span>
     </div>
+    <span v-if="isMutedPeer" class="muted-indicator">
+      <MicOff :size="14" />
+    </span>
     <div v-if="state.isHost && !isSelf && peerId" class="participant-actions">
       <button class="btn-force-mute" @click="forceMute">Mute</button>
       <button class="btn-kick" @click="kick">Kick</button>

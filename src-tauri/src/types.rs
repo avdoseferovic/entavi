@@ -13,6 +13,8 @@ pub struct PeerInfo {
     pub peer_id: String,
     #[serde(default)]
     pub name: String,
+    #[serde(default)]
+    pub is_host: bool,
 }
 
 // ── Signaling protocol messages ──
@@ -50,7 +52,14 @@ pub enum SignalMessage {
     LockRoom {
         password: Option<String>,
     },
+    MuteState {
+        muted: bool,
+    },
     // Server → Client
+    PeerMuteState {
+        peer_id: String,
+        muted: bool,
+    },
     RoomJoined {
         room_id: String,
         peers: Vec<PeerInfo>,
@@ -63,6 +72,8 @@ pub enum SignalMessage {
         peer_id: String,
         #[serde(default)]
         name: String,
+        #[serde(default)]
+        is_host: bool,
     },
     PeerLeft {
         peer_id: String,
@@ -116,6 +127,9 @@ pub const EVENT_KICKED: &str = "kicked";
 pub const EVENT_FORCE_MUTED: &str = "force-muted";
 pub const EVENT_ROOM_LOCKED: &str = "room-locked";
 pub const EVENT_PING_UPDATE: &str = "ping-update";
+pub const EVENT_VOICE_ACTIVITY: &str = "voice-activity";
+pub const EVENT_PEER_MUTE_CHANGED: &str = "peer-mute-changed";
+pub const EVENT_MIC_TEST_LEVEL: &str = "mic-test-level";
 
 // ── Audio device info (for mic selector) ──
 
@@ -123,6 +137,22 @@ pub const EVENT_PING_UPDATE: &str = "ping-update";
 pub struct AudioDevice {
     pub name: String,
     pub is_default: bool,
+}
+
+// ── Voice activity event (emitted to frontend) ──
+
+#[derive(Debug, Clone, Serialize)]
+pub struct VoiceActivityEvent {
+    pub speaking: Vec<String>,
+    pub self_speaking: bool,
+}
+
+// ── Peer mute event (emitted to frontend) ──
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PeerMuteEvent {
+    pub peer_id: String,
+    pub muted: bool,
 }
 
 // ── Encoded audio frame (mic → network) ──

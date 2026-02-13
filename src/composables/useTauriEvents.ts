@@ -1,5 +1,5 @@
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
-import type { CallState, PeerInfo } from '../types'
+import type { CallState, PeerInfo, VoiceActivityEvent, PeerMuteEvent } from '../types'
 import { useAppState } from './useAppState'
 import { useTauri } from './useTauri'
 
@@ -60,11 +60,14 @@ export async function setupListeners(): Promise<UnlistenFn[]> {
   unlisteners.push(
     await listen<PeerInfo>('peer-joined', (event) => {
       console.log('Peer joined:', event.payload)
-      const { peer_id, name } = event.payload
+      const { peer_id, name, is_host } = event.payload
       if (!state.peerList.has(peer_id)) {
         state.peerList.set(peer_id, name)
         // Trigger reactivity by reassigning the map
         state.peerList = new Map(state.peerList)
+      }
+      if (is_host) {
+        state.hostPeerId = peer_id
       }
     })
   )
@@ -74,6 +77,13 @@ export async function setupListeners(): Promise<UnlistenFn[]> {
       console.log('Peer left:', event.payload)
       state.peerList.delete(event.payload)
       state.peerList = new Map(state.peerList)
+      state.mutedPeers.delete(event.payload)
+      state.mutedPeers = new Set(state.mutedPeers)
+      state.speakingPeers.delete(event.payload)
+      state.speakingPeers = new Set(state.speakingPeers)
+      if (state.hostPeerId === event.payload) {
+        state.hostPeerId = null
+      }
     })
   )
 
@@ -119,6 +129,32 @@ export async function setupListeners(): Promise<UnlistenFn[]> {
   unlisteners.push(
     await listen<number>('ping-update', (event) => {
       state.pingMs = event.payload
+    })
+  )
+
+  unlisteners.push(
+    await listen<VoiceActivityEvent>('voice-activity', (event) => {
+      const { speaking, self_speaking } = event.payload
+      state.selfSpeaking = self_speaking
+      state.speakingPeers = new Set(speaking)
+    })
+  )
+
+  unlisteners.push(
+    await listen<number>('mic-test-level', (event) => {
+      state.micTestLevel = event.payload
+    })
+  )
+
+  unlisteners.push(
+    await listen<PeerMuteEvent>('peer-mute-changed', (event) => {
+      const { peer_id, muted } = event.payload
+      if (muted) {
+        state.mutedPeers.add(peer_id)
+      } else {
+        state.mutedPeers.delete(peer_id)
+      }
+      state.mutedPeers = new Set(state.mutedPeers)
     })
   )
 

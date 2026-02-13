@@ -107,6 +107,16 @@ async fn lock_room(
 }
 
 #[tauri::command]
+fn set_signaling_url(engine: tauri::State<'_, Engine>, url: Option<String>) {
+    engine.set_signaling_url(url);
+}
+
+#[tauri::command]
+fn set_noise_suppression(engine: tauri::State<'_, Engine>, enabled: bool) {
+    engine.set_noise_suppression(enabled);
+}
+
+#[tauri::command]
 fn start_mic_test(engine: tauri::State<'_, Engine>) -> Result<(), String> {
     engine.start_mic_test().map_err(|e| e.to_string())
 }
@@ -230,6 +240,8 @@ fn main() {
             lock_room,
             list_input_devices,
             set_input_device,
+            set_signaling_url,
+            set_noise_suppression,
             start_mic_test,
             stop_mic_test,
         ])

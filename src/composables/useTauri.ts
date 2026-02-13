@@ -39,12 +39,20 @@ export function useTauri() {
     return invoke('set_input_device', { deviceName })
   }
 
+  async function setSignalingUrl(url: string | null) {
+    return invoke('set_signaling_url', { url })
+  }
+
   async function startMicTest() {
     return invoke('start_mic_test')
   }
 
   async function stopMicTest() {
     return invoke('stop_mic_test')
+  }
+
+  async function setNoiseSuppression(enabled: boolean) {
+    return invoke('set_noise_suppression', { enabled })
   }
 
   async function showNotification(title: string, body: string) {
@@ -67,8 +75,10 @@ export function useTauri() {
     forceMutePeer,
     listInputDevices,
     setInputDevice,
+    setSignalingUrl,
     startMicTest,
     stopMicTest,
+    setNoiseSuppression,
     showNotification,
     emitMuteState,
   }

@@ -122,6 +122,10 @@ button:active { opacity: 0.7; }
     border-color: #4f46e5;
 }
 
+.mic-selector {
+    margin-bottom: 16px;
+}
+
 .btn-mic-test {
     margin-top: 12px;
     padding: 8px 16px;
@@ -134,6 +138,63 @@ button:active { opacity: 0.7; }
     background: #16a34a;
     color: #fff;
     border-color: #16a34a;
+}
+
+/* ── Noise suppression toggle ── */
+.noise-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+.toggle-track {
+    display: block;
+    position: relative;
+    width: 34px;
+    height: 18px;
+    border-radius: 9px;
+    background: #333350;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+.toggle-track.on {
+    background: #4f46e5;
+}
+.toggle-thumb {
+    display: block;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #ccc;
+    transition: transform 0.2s;
+}
+.toggle-track.on .toggle-thumb {
+    transform: translateX(16px);
+    background: #fff;
+}
+.toggle-label {
+    font-size: 13px;
+    color: #888;
+}
+
+/* ── Mic level meter ── */
+.mic-level-meter {
+    margin-top: 10px;
+    height: 6px;
+    border-radius: 3px;
+    background: #252538;
+    overflow: hidden;
+}
+.mic-level-bar {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #22c55e, #4ade80);
+    transition: width 0.06s linear;
+    min-width: 0;
 }
 
 /* ── Input fields ── */
@@ -352,6 +413,15 @@ input[type="text"]::placeholder {
     justify-content: center;
     flex-shrink: 0;
     text-transform: uppercase;
+    border: 2px solid transparent;
+    transition: border-color 0.15s, box-shadow 0.15s, opacity 0.15s;
+}
+.avatar.speaking {
+    border-color: #22c55e;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.35);
+}
+.avatar.muted {
+    opacity: 0.5;
 }
 
 .participant-info {
@@ -376,6 +446,13 @@ input[type="text"]::placeholder {
     color: #f59e0b;
     display: inline-flex;
     align-items: center;
+}
+
+.muted-indicator {
+    color: #ef4444;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
 }
 
 .participant-actions {

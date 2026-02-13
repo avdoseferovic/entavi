@@ -43,10 +43,6 @@ async function copyRoomCode() {
         {{ copyFeedback ? 'Copied!' : 'Copy' }}
       </span>
     </div>
-    <p class="status-text">
-      <span class="status-dot" :class="state.statusState"></span>
-      {{ state.statusText }}
-    </p>
     <div class="room-divider"></div>
 
     <div class="participant-list">
@@ -54,13 +50,17 @@ async function copyRoomCode() {
         :name="getDisplayName()"
         :is-self="true"
         :is-host-entry="state.isHost"
+        :is-speaking="state.selfSpeaking && !state.isMuted"
+        :is-muted-peer="state.isMuted"
       />
       <ParticipantItem
         v-for="[peerId, name] in state.peerList"
         :key="peerId"
         :name="name || peerId.substring(0, 8)"
         :is-self="false"
-        :is-host-entry="false"
+        :is-host-entry="peerId === state.hostPeerId"
+        :is-speaking="state.speakingPeers.has(peerId)"
+        :is-muted-peer="state.mutedPeers.has(peerId)"
         :peer-id="peerId"
       />
     </div>

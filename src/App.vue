@@ -77,6 +77,22 @@ function onTrayToggleMute() {
 }
 
 onMounted(async () => {
+  // Restore persisted settings from localStorage
+  const savedName = localStorage.getItem('entavi:displayName')
+  if (savedName) state.displayName = savedName
+
+  const savedSignalingUrl = localStorage.getItem('entavi:signalingUrl')
+  if (savedSignalingUrl) {
+    state.signalingUrl = savedSignalingUrl
+    tauri.setSignalingUrl(savedSignalingUrl)
+  }
+
+  const savedNoiseSuppression = localStorage.getItem('entavi:noiseSuppression')
+  if (savedNoiseSuppression !== null) {
+    state.noiseSuppression = savedNoiseSuppression !== 'false'
+  }
+  tauri.setNoiseSuppression(state.noiseSuppression)
+
   unlisteners = await setupListeners()
   window.addEventListener('entavi:tray-toggle-mute', onTrayToggleMute)
 })
@@ -89,7 +105,7 @@ onUnmounted(() => {
 
 <template>
   <div class="container">
-    <header>
+    <header v-if="state.currentView === 'home'">
       <h1>Entavi</h1>
       <p class="subtitle">Peer-to-peer voice calls</p>
     </header>

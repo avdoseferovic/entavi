@@ -36,13 +36,19 @@ interface LockRoomMessage {
   password: string | null;
 }
 
+interface MuteStateMessage {
+  type: "mute_state";
+  muted: boolean;
+}
+
 type IncomingMessage =
   | JoinMessage
   | LeaveMessage
   | SignalMessage
   | KickMessage
   | ForceMuteMessage
-  | LockRoomMessage;
+  | LockRoomMessage
+  | MuteStateMessage;
 
 interface Attachment {
   peerId: string;
@@ -143,12 +149,12 @@ export class Room extends DurableObject {
           roomPassword: storedPassword,
         } satisfies Attachment);
 
-        // Collect existing peers as {peer_id, name}
-        const peers: { peer_id: string; name: string }[] = [];
+        // Collect existing peers as {peer_id, name, is_host}
+        const peers: { peer_id: string; name: string; is_host: boolean }[] = [];
         for (const sock of this.ctx.getWebSockets()) {
           if (sock === ws) continue;
           const att = sock.deserializeAttachment() as Attachment | null;
-          if (att?.peerId) peers.push({ peer_id: att.peerId, name: att.name });
+          if (att?.peerId) peers.push({ peer_id: att.peerId, name: att.name, is_host: att.isHost });
         }
 
         // Send room_joined to the new peer
@@ -162,11 +168,12 @@ export class Room extends DurableObject {
           })
         );
 
-        // Broadcast peer_joined to existing peers (include name)
+        // Broadcast peer_joined to existing peers (include name and host status)
         const joinedMsg = JSON.stringify({
           type: "peer_joined",
           peer_id: msg.peer_id,
           name: msg.name,
+          is_host: isHost,
         });
         for (const sock of this.ctx.getWebSockets()) {
           if (sock === ws) continue;
@@ -245,6 +252,29 @@ export class Room extends DurableObject {
           if (sockAtt?.peerId === msg.peer_id) {
             sock.send(JSON.stringify({ type: "force_muted" }));
             break;
+          }
+        }
+        break;
+      }
+
+      case "mute_state": {
+        const att = ws.deserializeAttachment() as Attachment | null;
+        if (!att?.peerId) return;
+
+        const muteMsg = JSON.stringify({
+          type: "peer_mute_state",
+          peer_id: att.peerId,
+          muted: msg.muted,
+        });
+        for (const sock of this.ctx.getWebSockets()) {
+          if (sock === ws) continue;
+          const sockAtt = sock.deserializeAttachment() as Attachment | null;
+          if (sockAtt?.peerId) {
+            try {
+              sock.send(muteMsg);
+            } catch {
+              // Socket already closed
+            }
           }
         }
         break;

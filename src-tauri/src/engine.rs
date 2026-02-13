@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use anyhow::{Context, Result};
 use tauri::{AppHandle, Emitter};
@@ -12,7 +13,7 @@ use crate::peer::PeerConn;
 use crate::signaling;
 use crate::types::*;
 
-const SIGNALING_URL: &str = "wss://entavi-signaling.avdo.workers.dev/ws";
+const DEFAULT_SIGNALING_URL: &str = "wss://entavi-signaling.avdo.workers.dev/ws";
 
 /// Engine is the central orchestrator stored in Tauri managed state.
 pub struct Engine {
@@ -20,7 +21,9 @@ pub struct Engine {
     app: AppHandle,
     /// Persists across sessions — not inside EngineInner.
     selected_input_device: std::sync::Mutex<Option<String>>,
+    signaling_url: std::sync::Mutex<Option<String>>,
     mic_test: std::sync::Mutex<Option<MicTest>>,
+    noise_suppression: Arc<AtomicBool>,
 }
 
 struct EngineInner {
@@ -48,8 +51,14 @@ impl Engine {
             inner: Arc::new(Mutex::new(None)),
             app,
             selected_input_device: std::sync::Mutex::new(None),
+            signaling_url: std::sync::Mutex::new(None),
             mic_test: std::sync::Mutex::new(None),
+            noise_suppression: Arc::new(AtomicBool::new(true)),
         }
+    }
+
+    pub fn set_signaling_url(&self, url: Option<String>) {
+        *self.signaling_url.lock().unwrap() = url;
     }
 
     /// Create a new room. Returns the room_id (6-char code).
@@ -105,11 +114,13 @@ impl Engine {
         // Start audio capture and playback
         let device_name = self.selected_input_device.lock().unwrap().clone();
         let capture =
-            AudioCapture::new(device_name).context("Failed to start audio capture")?;
+            AudioCapture::new(device_name, Arc::clone(&self.noise_suppression)).context("Failed to start audio capture")?;
         let playback = AudioPlayback::new().context("Failed to start audio playback")?;
 
         // Connect to signaling server (room_id is part of the URL path)
-        let ws_url = format!("{SIGNALING_URL}/{room_id}");
+        let base_url = self.signaling_url.lock().unwrap().clone()
+            .unwrap_or_else(|| DEFAULT_SIGNALING_URL.to_string());
+        let ws_url = format!("{base_url}/{room_id}");
         let (signal_tx, signal_rx, rtt_rx) = signaling::connect(&ws_url)
             .await
             .context("Failed to connect to signaling server")?;
@@ -194,6 +205,8 @@ impl Engine {
         let guard = self.inner.lock().await;
         if let Some(inner) = guard.as_ref() {
             inner.capture.set_muted(muted);
+            // Broadcast mute state to all peers via signaling
+            let _ = inner.signal_tx.send(SignalMessage::MuteState { muted });
         }
         Ok(())
     }
@@ -251,7 +264,7 @@ impl Engine {
         let mut guard = self.inner.lock().await;
         if let Some(inner) = guard.as_mut() {
             let new_capture =
-                AudioCapture::new(name).context("Failed to restart audio capture")?;
+                AudioCapture::new(name, Arc::clone(&self.noise_suppression)).context("Failed to restart audio capture")?;
             // Replace capture — old one is dropped, its thread exits when
             // the encoded_tx sender side is dropped (receiver gone).
             inner.capture = new_capture;
@@ -269,9 +282,13 @@ impl Engine {
         // Stop any existing test first
         self.stop_mic_test();
         let device_name = self.selected_input_device.lock().unwrap().clone();
-        let test = MicTest::new(device_name)?;
+        let test = MicTest::new(device_name, self.app.clone(), Arc::clone(&self.noise_suppression))?;
         *self.mic_test.lock().unwrap() = Some(test);
         Ok(())
+    }
+
+    pub fn set_noise_suppression(&self, enabled: bool) {
+        self.noise_suppression.store(enabled, Ordering::Relaxed);
     }
 
     pub fn stop_mic_test(&self) {
@@ -292,6 +309,8 @@ async fn engine_loop(
     signal_tx: flume::Sender<SignalMessage>,
     app: AppHandle,
 ) -> Result<()> {
+    let mut va_counter: u32 = 0;
+
     loop {
         // Get encoded audio rx, ice_rx, and rtt_rx from inner (if still active)
         let (encoded_rx, ice_rx, rtt_rx) = {
@@ -346,15 +365,25 @@ async fn engine_loop(
             if let Some(inner) = guard.as_mut() {
                 let mut mixed = vec![0.0f32; FRAME_SIZE];
                 let mut has_audio = false;
+                let mut speaking_peers: Vec<String> = Vec::new();
 
-                for (_, peer) in &inner.peers {
+                for (peer_id, peer) in &inner.peers {
+                    let mut peer_peak: f32 = 0.0;
+                    let mut peer_has_audio = false;
+
                     while let Ok(frame) = peer.decoded_rx.try_recv() {
                         has_audio = true;
+                        peer_has_audio = true;
                         for (i, sample) in frame.samples.iter().enumerate() {
+                            peer_peak = peer_peak.max(sample.abs());
                             if i < mixed.len() {
                                 mixed[i] += sample;
                             }
                         }
+                    }
+
+                    if peer_has_audio && peer_peak > 0.01 {
+                        speaking_peers.push(peer_id.clone());
                     }
                 }
 
@@ -364,6 +393,20 @@ async fn engine_loop(
                         *s = s.clamp(-1.0, 1.0);
                     }
                     inner.playback.write(&mixed);
+                }
+
+                // Emit voice activity event every ~100ms (5 frames × 20ms)
+                va_counter += 1;
+                if va_counter >= 5 {
+                    va_counter = 0;
+                    let self_speaking = inner.capture.is_speaking();
+                    let _ = app.emit(
+                        EVENT_VOICE_ACTIVITY,
+                        VoiceActivityEvent {
+                            speaking: speaking_peers,
+                            self_speaking,
+                        },
+                    );
                 }
             }
         }
@@ -425,9 +468,9 @@ async fn handle_signal_message(
             }
         }
 
-        SignalMessage::PeerJoined { peer_id, name } => {
+        SignalMessage::PeerJoined { peer_id, name, is_host } => {
             tracing::info!("Peer {peer_id} ({name}) joined — waiting for their offer");
-            let _ = app.emit(EVENT_PEER_JOINED, PeerInfo { peer_id: peer_id.clone(), name });
+            let _ = app.emit(EVENT_PEER_JOINED, PeerInfo { peer_id: peer_id.clone(), name, is_host });
 
             let guard = engine.lock().await;
             if let Some(inner) = guard.as_ref() {
@@ -550,6 +593,11 @@ async fn handle_signal_message(
                     message: "Room not found".to_string(),
                 },
             );
+        }
+
+        SignalMessage::PeerMuteState { peer_id, muted } => {
+            tracing::info!("Peer {peer_id} mute state changed: {muted}");
+            let _ = app.emit(EVENT_PEER_MUTE_CHANGED, PeerMuteEvent { peer_id, muted });
         }
 
         SignalMessage::Signal { from: Some(from), payload, .. } => {

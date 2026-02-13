@@ -17,4 +17,15 @@ export interface AudioDevice {
 export interface PeerInfo {
   peer_id: string
   name: string
+  is_host?: boolean
+}
+
+export interface VoiceActivityEvent {
+  speaking: string[]
+  self_speaking: boolean
+}
+
+export interface PeerMuteEvent {
+  peer_id: string
+  muted: boolean
 }
