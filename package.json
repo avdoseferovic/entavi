@@ -1,7 +1,7 @@
 {
   "name": "entavi",
   "private": true,
-  "version": "0.1.0-beta.3",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -20,6 +20,7 @@
     "vue-tsc": "^3.2.4"
   },
   "dependencies": {
+    "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-updater": "^2.10.0",
     "lucide-vue-next": "^0.563.0",
     "vue": "^3.5.28"
