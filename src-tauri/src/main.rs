@@ -16,6 +16,7 @@ use tauri::{
     Emitter, Listener, Manager,
 };
 use tauri_plugin_notification::NotificationExt;
+use tauri_plugin_updater::UpdaterExt;
 
 #[tauri::command]
 async fn show_notification(app: tauri::AppHandle, title: String, body: String) -> Result<(), String> {
@@ -25,6 +26,38 @@ async fn show_notification(app: tauri::AppHandle, title: String, body: String) -
         .body(&body)
         .show()
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn check_for_updates(app: tauri::AppHandle) -> Result<(), String> {
+    tracing::info!("Checking for updates...");
+    let updater = app.updater().map_err(|e| e.to_string())?;
+    match updater.check().await {
+        Ok(Some(update)) => {
+            tracing::info!("Update available: {}", update.version);
+            tracing::info!("Downloading update...");
+            if let Err(e) = update.download_and_install(
+                |chunk_length, content_length| {
+                    tracing::debug!("Downloaded chunk: {} bytes (total: {:?})", chunk_length, content_length);
+                },
+                || {
+                    tracing::info!("Download finished, restarting...");
+                },
+            ).await {
+                tracing::error!("Failed to install update: {}", e);
+                return Err(e.to_string());
+            }
+            app.restart();
+        }
+        Ok(None) => {
+            tracing::info!("App is up to date");
+        }
+        Err(e) => {
+            tracing::error!("Update check failed: {}", e);
+            return Err(e.to_string());
+        }
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -232,6 +265,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             show_notification,
+            check_for_updates,
             create_room,
             join_room,
             leave_room,

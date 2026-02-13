@@ -61,6 +61,10 @@ export function useTauri() {
     } catch (_) { /* ignore */ }
   }
 
+  async function checkForUpdates() {
+    invoke('check_for_updates').catch(() => {})
+  }
+
   async function emitMuteState(muted: boolean) {
     await emit('mute-state-changed', muted ? 'muted' : 'unmuted')
   }
@@ -80,6 +84,7 @@ export function useTauri() {
     stopMicTest,
     setNoiseSuppression,
     showNotification,
+    checkForUpdates,
     emitMuteState,
   }
 }
