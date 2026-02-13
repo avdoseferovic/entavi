@@ -8,7 +8,6 @@ mod signaling;
 mod types;
 
 use engine::Engine;
-use types::AudioDevice;
 use std::sync::Arc;
 use tauri::{
     menu::{MenuBuilder, MenuItem},
@@ -17,9 +16,14 @@ use tauri::{
 };
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_updater::UpdaterExt;
+use types::AudioDevice;
 
 #[tauri::command]
-async fn show_notification(app: tauri::AppHandle, title: String, body: String) -> Result<(), String> {
+async fn show_notification(
+    app: tauri::AppHandle,
+    title: String,
+    body: String,
+) -> Result<(), String> {
     app.notification()
         .builder()
         .title(&title)
@@ -36,14 +40,21 @@ async fn check_for_updates(app: tauri::AppHandle) -> Result<(), String> {
         Ok(Some(update)) => {
             tracing::info!("Update available: {}", update.version);
             tracing::info!("Downloading update...");
-            if let Err(e) = update.download_and_install(
-                |chunk_length, content_length| {
-                    tracing::debug!("Downloaded chunk: {} bytes (total: {:?})", chunk_length, content_length);
-                },
-                || {
-                    tracing::info!("Download finished, restarting...");
-                },
-            ).await {
+            if let Err(e) = update
+                .download_and_install(
+                    |chunk_length, content_length| {
+                        tracing::debug!(
+                            "Downloaded chunk: {} bytes (total: {:?})",
+                            chunk_length,
+                            content_length
+                        );
+                    },
+                    || {
+                        tracing::info!("Download finished, restarting...");
+                    },
+                )
+                .await
+            {
                 tracing::error!("Failed to install update: {}", e);
                 return Err(e.to_string());
             }
@@ -113,18 +124,12 @@ async fn set_input_device(
 }
 
 #[tauri::command]
-async fn kick_peer(
-    engine: tauri::State<'_, Engine>,
-    peer_id: String,
-) -> Result<(), String> {
+async fn kick_peer(engine: tauri::State<'_, Engine>, peer_id: String) -> Result<(), String> {
     engine.kick_peer(peer_id).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-async fn force_mute_peer(
-    engine: tauri::State<'_, Engine>,
-    peer_id: String,
-) -> Result<(), String> {
+async fn force_mute_peer(engine: tauri::State<'_, Engine>, peer_id: String) -> Result<(), String> {
     engine
         .force_mute_peer(peer_id)
         .await
@@ -222,7 +227,8 @@ fn main() {
             let mute_for_listener = Arc::clone(&mute_item);
             let main_window_tray = main_window.clone();
 
-            let icon = tauri::image::Image::from_bytes(include_bytes!("../../icons/tray-icon@2x.png"))?;
+            let icon =
+                tauri::image::Image::from_bytes(include_bytes!("../../icons/tray-icon@2x.png"))?;
             let _tray = TrayIconBuilder::with_id("main-tray")
                 .icon(icon)
                 .menu(&menu)
@@ -250,7 +256,11 @@ fn main() {
             // Listen for mute state changes from frontend to update tray label
             let main_window_listener = main_window.clone();
             main_window_listener.listen("mute-state-changed", move |event| {
-                if let Some(payload) = event.payload().strip_prefix('"').and_then(|s| s.strip_suffix('"')) {
+                if let Some(payload) = event
+                    .payload()
+                    .strip_prefix('"')
+                    .and_then(|s| s.strip_suffix('"'))
+                {
                     if let Ok(item) = mute_for_listener.lock() {
                         let label = if payload == "muted" { "Unmute" } else { "Mute" };
                         let _ = item.set_text(label);

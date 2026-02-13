@@ -135,14 +135,14 @@ jobs:
           DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
           # Read signatures
-          MACOS_SIG=$(cat artifacts/*.tar.gz.sig 2>/dev/null || echo "")
-          LINUX_SIG=$(cat artifacts/*.AppImage.sig 2>/dev/null || echo "")
-          WINDOWS_SIG=$(cat artifacts/*.nsis.zip.sig 2>/dev/null || echo "")
+          MACOS_SIG=$(cat "$(find artifacts -name '*.tar.gz.sig' | head -1)" 2>/dev/null || echo "")
+          LINUX_SIG=$(cat "$(find artifacts -name '*.AppImage.sig' | head -1)" 2>/dev/null || echo "")
+          WINDOWS_SIG=$(cat "$(find artifacts -name '*.nsis.zip.sig' | head -1)" 2>/dev/null || echo "")
 
           # Get filenames
-          MACOS_FILE=$(basename artifacts/*.tar.gz 2>/dev/null | head -1 || echo "")
-          LINUX_FILE=$(basename artifacts/*.AppImage 2>/dev/null | head -1 || echo "")
-          WINDOWS_FILE=$(basename artifacts/*.nsis.zip 2>/dev/null | head -1 || echo "")
+          MACOS_FILE=$(basename "$(find artifacts -name '*.tar.gz' -not -name '*.sig' | head -1)" 2>/dev/null || echo "")
+          LINUX_FILE=$(basename "$(find artifacts -name '*.AppImage' -not -name '*.sig' | head -1)" 2>/dev/null || echo "")
+          WINDOWS_FILE=$(basename "$(find artifacts -name '*.nsis.zip' -not -name '*.sig' | head -1)" 2>/dev/null || echo "")
 
           cat > artifacts/latest.json <<EOF
           {
