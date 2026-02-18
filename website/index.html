@@ -407,38 +407,6 @@
       color: #fff;
     }
 
-    /* Host controls (password row) */
-    .preview-host-controls {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-
-    .preview-pw-input {
-      flex: 1;
-      padding: 9px 12px;
-      border: 1px solid #333350;
-      border-radius: 10px;
-      background: #252538;
-      color: #555;
-      font-size: 0.78rem;
-      font-family: inherit;
-      outline: none;
-    }
-
-    .preview-pw-btn {
-      padding: 9px 16px;
-      border: 1px solid #333350;
-      border-radius: 10px;
-      background: #252538;
-      color: #ccc;
-      font-size: 0.78rem;
-      font-weight: 500;
-      font-family: inherit;
-      cursor: default;
-      white-space: nowrap;
-    }
-
     /* Bottom controls */
     .preview-controls {
       display: flex;
@@ -977,7 +945,7 @@
       {
         "@type": "Question",
         "name": "What platforms are supported?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Entavi is available for macOS (Apple Silicon), Windows, and Linux (AppImage and .deb)." }
+        "acceptedAnswer": { "@type": "Answer", "text": "Entavi is available for macOS (Apple Silicon), Windows, and Linux (AppImage and .deb). You can also use it in your browser at web.entavi.app." }
       },
       {
         "@type": "Question",
@@ -987,7 +955,7 @@
       {
         "@type": "Question",
         "name": "Is it encrypted?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Yes. All audio is encrypted using DTLS-SRTP, the standard encryption built into WebRTC. No one — not even us — can listen to your conversations." }
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes. All audio and chat messages are encrypted using DTLS-SRTP, the standard encryption built into WebRTC. No one — not even us — can listen to your conversations or read your messages." }
       },
       {
         "@type": "Question",
@@ -1034,27 +1002,27 @@
   <section class="hero">
     <div class="hero-content">
       <div class="hero-badge">
-        <span>v0.1.3</span> Now available for macOS, Windows & Linux
+        <span>v0.1.5</span> Now with E2E encrypted chat + web app
       </div>
       <h1>Voice chat that's <span class="accent">free, private</span> and P2P encrypted</h1>
       <p class="hero-sub">
         No accounts. No servers routing your audio. Just create a room, share the code, and talk — directly and encrypted, peer-to-peer.
       </p>
       <div class="download-buttons">
-        <a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.3/Entavi_0.1.3_aarch64.dmg" class="btn btn-primary">
+        <a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.5/Entavi_0.1.5_aarch64.dmg" class="btn btn-primary">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
           macOS (Apple Silicon)
         </a>
-        <a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.3/Entavi_0.1.3_x64-setup.exe" class="btn btn-secondary">
+        <a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.5/Entavi_0.1.5_x64-setup.exe" class="btn btn-secondary">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
           Windows
         </a>
-        <a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.3/Entavi_0.1.3_amd64.deb" class="btn btn-secondary">
+        <a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.5/Entavi_0.1.5_amd64.deb" class="btn btn-secondary">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a.424.424 0 00-.11.135c-.26.268-.45.6-.663.839-.199.199-.485.267-.797.4-.313.136-.658.269-.864.68-.09.189-.136.394-.132.602 0 .199.027.4.055.536.058.399.116.728.04.97-.249.68-.28 1.145-.106 1.484.174.334.535.47.94.601.81.2 1.91.135 2.774.6.926.466 1.866.67 2.616.47.526-.116.97-.464 1.208-.946.587-.003 1.23-.269 2.26-.334.699-.058 1.574.267 2.577.2.025.134.063.198.114.333l.003.003c.391.778 1.113 1.368 1.884 1.43.868.074 1.741-.378 1.861-1.25.247-.801.103-1.378-.272-1.869-.384-.502-.819-.78-.99-1.156-.108-.24-.183-.602-.111-1.02.075-.042.158-.078.237-.128.275-.174.544-.418.763-.741.468-.689.853-1.86.775-3.518-.044-1.125-.1-2.766.413-4.72.513-1.932 1.612-4.104 4.233-5.164a.23.23 0 00.142-.201.226.226 0 00-.17-.209c-.51-.132-1.153-.199-1.79-.199-2.267 0-4.525 1.095-5.04 3.398-.177-.006-.357-.007-.538-.007-2.769 0-5.89.893-5.89.893s.55-.706 2.013-1.464c.624-.3 1.035-.726 1.276-1.191.238-.459.339-.947.399-1.384.063-.432.077-.831.077-1.148-.004-.387-.057-.771-.129-1.132-.059-.339-.123-.67-.178-.974-.085-.504-.143-.95-.136-1.339.003-.327.038-.628.147-.917.16-.423.59-.714 1.097-.758a.5.5 0 00.107-.009z"/></svg>
           Linux (.deb)
         </a>
       </div>
-      <p class="hero-note">Also available as <a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.3/Entavi_0.1.3_amd64.AppImage">Linux AppImage</a></p>
+      <p class="hero-note">Also available as <a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.5/Entavi_0.1.5_amd64.AppImage">Linux AppImage</a> &middot; or <a href="https://web.entavi.app">try in your browser</a></p>
 
       <!-- App preview mockup -->
       <div class="app-preview">
@@ -1122,12 +1090,6 @@
             </div>
           </div>
 
-          <!-- Host controls -->
-          <div class="preview-host-controls">
-            <span class="preview-pw-input">Room password</span>
-            <span class="preview-pw-btn">Set Password</span>
-          </div>
-
           <!-- Bottom controls -->
           <div class="preview-controls">
             <div class="preview-ctrl-btn">
@@ -1186,10 +1148,17 @@
         </div>
         <div class="feature-card">
           <div class="feature-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
           </div>
-          <h3>Cross-Platform + Auto Updates</h3>
-          <p>Native desktop app for macOS, Windows, and Linux. Built with Tauri for a lightweight, fast experience — with automatic updates built in.</p>
+          <h3>E2E Encrypted Chat</h3>
+          <p>Send text messages over the same encrypted WebRTC connection. Chat data flows directly between peers — the signaling server never sees it.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </div>
+          <h3>Web App + Cross-Platform</h3>
+          <p>Use Entavi directly in your browser at <a href="https://web.entavi.app" style="color:var(--accent-light)">web.entavi.app</a>, or download the native desktop app for macOS, Windows, and Linux.</p>
         </div>
       </div>
     </div>
@@ -1259,7 +1228,7 @@
             <div class="security-check">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
-            <span>Audio encrypted with <strong>DTLS-SRTP</strong> — standard WebRTC encryption protocol</span>
+            <span>Audio and chat encrypted with <strong>DTLS-SRTP</strong> — standard WebRTC encryption protocol</span>
           </li>
           <li>
             <div class="security-check">
@@ -1380,7 +1349,7 @@
             <svg class="faq-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <div class="faq-answer">
-            <div class="faq-answer-inner">Entavi is available for macOS (Apple Silicon), Windows (64-bit), and Linux (AppImage and .deb packages). It's a native desktop app built with Tauri, so it's fast and lightweight on every platform.</div>
+            <div class="faq-answer-inner">Entavi is available for macOS (Apple Silicon), Windows (64-bit), and Linux (AppImage and .deb packages). You can also use it directly in your browser at <a href="https://web.entavi.app">web.entavi.app</a> — no download required. The native desktop app is built with Tauri, so it's fast and lightweight.</div>
           </div>
         </div>
         <div class="faq-item">
@@ -1398,7 +1367,7 @@
             <svg class="faq-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <div class="faq-answer">
-            <div class="faq-answer-inner">Yes. All audio is encrypted using DTLS-SRTP, the standard encryption built into WebRTC. Since audio never passes through our servers, no one — not even us — can listen to your conversations.</div>
+            <div class="faq-answer-inner">Yes. All audio and chat messages are encrypted using DTLS-SRTP, the standard encryption built into WebRTC. Since data never passes through our servers, no one — not even us — can listen to your conversations or read your messages.</div>
           </div>
         </div>
         <div class="faq-item">
@@ -1440,10 +1409,11 @@
         <div class="footer-col">
           <h4>Download</h4>
           <ul>
-            <li><a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.3/Entavi_0.1.3_aarch64.dmg">macOS (Apple Silicon)</a></li>
-            <li><a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.3/Entavi_0.1.3_x64-setup.exe">Windows</a></li>
-            <li><a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.3/Entavi_0.1.3_amd64.deb">Linux (.deb)</a></li>
-            <li><a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.3/Entavi_0.1.3_amd64.AppImage">Linux (AppImage)</a></li>
+            <li><a href="https://web.entavi.app">Web App</a></li>
+            <li><a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.5/Entavi_0.1.5_aarch64.dmg">macOS (Apple Silicon)</a></li>
+            <li><a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.5/Entavi_0.1.5_x64-setup.exe">Windows</a></li>
+            <li><a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.5/Entavi_0.1.5_amd64.deb">Linux (.deb)</a></li>
+            <li><a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.5/Entavi_0.1.5_amd64.AppImage">Linux (AppImage)</a></li>
           </ul>
         </div>
         <div class="footer-col">
