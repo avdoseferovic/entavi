@@ -130,6 +130,7 @@ pub const EVENT_PING_UPDATE: &str = "ping-update";
 pub const EVENT_VOICE_ACTIVITY: &str = "voice-activity";
 pub const EVENT_PEER_MUTE_CHANGED: &str = "peer-mute-changed";
 pub const EVENT_MIC_TEST_LEVEL: &str = "mic-test-level";
+pub const EVENT_CHAT_MESSAGE: &str = "chat-message";
 
 // ── Audio device info (for mic selector) ──
 
@@ -153,6 +154,18 @@ pub struct VoiceActivityEvent {
 pub struct PeerMuteEvent {
     pub peer_id: String,
     pub muted: bool,
+}
+
+// ── Chat message event (emitted to frontend) ──
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ChatMessageEvent {
+    pub id: String,
+    pub peer_id: String,
+    pub sender_name: String,
+    pub content: String,
+    pub timestamp: u64,
+    pub is_self: bool,
 }
 
 // ── Encoded audio frame (mic → network) ──

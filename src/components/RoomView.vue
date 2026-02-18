@@ -4,8 +4,8 @@ import { Copy, Check } from 'lucide-vue-next'
 import { useAppState } from '../composables/useAppState'
 import ParticipantItem from './ParticipantItem.vue'
 import RoomControls from './RoomControls.vue'
-import HostControls from './HostControls.vue'
 import PingIndicator from './PingIndicator.vue'
+import ChatPanel from './ChatPanel.vue'
 
 const { state, peerCountLabel, getDisplayName } = useAppState()
 
@@ -45,7 +45,25 @@ async function copyRoomCode() {
     </div>
     <div class="room-divider"></div>
 
-    <div class="participant-list">
+    <div class="room-tabs">
+      <button
+        class="room-tab"
+        :class="{ active: state.activeRoomTab === 'people' }"
+        @click="state.activeRoomTab = 'people'"
+      >
+        People
+      </button>
+      <button
+        class="room-tab"
+        :class="{ active: state.activeRoomTab === 'chat' }"
+        @click="state.activeRoomTab = 'chat'; state.chatUnread = 0"
+      >
+        Chat
+        <span v-if="state.chatUnread > 0" class="chat-unread-dot"></span>
+      </button>
+    </div>
+
+    <div v-if="state.activeRoomTab === 'people'" class="participant-list">
       <ParticipantItem
         :name="getDisplayName()"
         :is-self="true"
@@ -65,7 +83,7 @@ async function copyRoomCode() {
       />
     </div>
 
-    <HostControls v-if="state.isHost" />
+    <ChatPanel v-if="state.activeRoomTab === 'chat'" />
 
     <div
       class="notice-banner"

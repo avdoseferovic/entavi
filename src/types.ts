@@ -29,3 +29,12 @@ export interface PeerMuteEvent {
   peer_id: string
   muted: boolean
 }
+
+export interface ChatMessage {
+  id: string
+  peer_id: string
+  sender_name: string
+  content: string
+  timestamp: number
+  is_self: boolean
+}

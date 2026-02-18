@@ -1,25 +1,21 @@
-import { listen, type UnlistenFn } from '@tauri-apps/api/event'
-import type { CallState, PeerInfo, VoiceActivityEvent, PeerMuteEvent, ChatMessage } from '../types'
-import { useAppState } from './useAppState'
-import { useTauri } from './useTauri'
+import type { CallState, PeerInfo, VoiceActivityEvent, PeerMuteEvent, ChatMessage } from '@shared/types'
+import { useAppState } from '@shared/composables/useAppState'
+import { useTauri } from './useWeb'
+import { getEngine } from '../engine'
 
+type UnlistenFn = () => void
+
+// Named setupListeners so imports from shared components work via Vite alias
 export async function setupListeners(): Promise<UnlistenFn[]> {
   const { state, setStatus } = useAppState()
   const { emitMuteState, showNotification } = useTauri()
+  const engine = getEngine()
 
   const unlisteners: UnlistenFn[] = []
 
   unlisteners.push(
-    await listen('tray-toggle-mute', async () => {
-      // Handled by App.vue via a shared toggleMute function
-      // We emit a custom DOM event so App.vue can call toggleMute
-      window.dispatchEvent(new CustomEvent('entavi:tray-toggle-mute'))
-    })
-  )
-
-  unlisteners.push(
-    await listen<CallState>('state-changed', (event) => {
-      const s = event.payload
+    engine.on('state-changed', (payload: unknown) => {
+      const s = payload as CallState
       switch (s.state) {
         case 'idle':
           break
@@ -58,12 +54,11 @@ export async function setupListeners(): Promise<UnlistenFn[]> {
   )
 
   unlisteners.push(
-    await listen<PeerInfo>('peer-joined', (event) => {
-      console.log('Peer joined:', event.payload)
-      const { peer_id, name, is_host } = event.payload
+    engine.on('peer-joined', (payload: unknown) => {
+      const { peer_id, name, is_host } = payload as PeerInfo
+      console.log('Peer joined:', payload)
       if (!state.peerList.has(peer_id)) {
         state.peerList.set(peer_id, name)
-        // Trigger reactivity by reassigning the map
         state.peerList = new Map(state.peerList)
       }
       if (is_host) {
@@ -73,29 +68,30 @@ export async function setupListeners(): Promise<UnlistenFn[]> {
   )
 
   unlisteners.push(
-    await listen<string>('peer-left', (event) => {
-      console.log('Peer left:', event.payload)
-      state.peerList.delete(event.payload)
+    engine.on('peer-left', (peerId: unknown) => {
+      const id = peerId as string
+      console.log('Peer left:', id)
+      state.peerList.delete(id)
       state.peerList = new Map(state.peerList)
-      state.mutedPeers.delete(event.payload)
+      state.mutedPeers.delete(id)
       state.mutedPeers = new Set(state.mutedPeers)
-      state.speakingPeers.delete(event.payload)
+      state.speakingPeers.delete(id)
       state.speakingPeers = new Set(state.speakingPeers)
-      if (state.hostPeerId === event.payload) {
+      if (state.hostPeerId === id) {
         state.hostPeerId = null
       }
     })
   )
 
   unlisteners.push(
-    await listen<string>('error', (event) => {
-      console.error('Engine error:', event.payload)
-      setStatus(event.payload, 'error')
+    engine.on('error', (message: unknown) => {
+      console.error('Engine error:', message)
+      setStatus(message as string, 'error')
     })
   )
 
   unlisteners.push(
-    await listen('kicked', () => {
+    engine.on('kicked', () => {
       state.currentView = 'home'
       showNotification('Kicked', 'You were removed from the room by the host')
       state.roomCode = null
@@ -110,7 +106,7 @@ export async function setupListeners(): Promise<UnlistenFn[]> {
   )
 
   unlisteners.push(
-    await listen('force-muted', () => {
+    engine.on('force-muted', () => {
       state.isMuted = true
       emitMuteState(true)
       state.noticeBannerVisible = true
@@ -121,34 +117,35 @@ export async function setupListeners(): Promise<UnlistenFn[]> {
   )
 
   unlisteners.push(
-    await listen<boolean>('room-locked', (event) => {
-      state.isRoomLocked = event.payload
+    engine.on('room-locked', (locked: unknown) => {
+      state.isRoomLocked = locked as boolean
     })
   )
 
   unlisteners.push(
-    await listen<number>('ping-update', (event) => {
-      state.pingMs = event.payload
+    engine.on('ping-update', (rtt: unknown) => {
+      state.pingMs = rtt as number
     })
   )
 
   unlisteners.push(
-    await listen<VoiceActivityEvent>('voice-activity', (event) => {
-      const { speaking, self_speaking } = event.payload
+    engine.on('voice-activity', (payload: unknown) => {
+      const { speaking, self_speaking } = payload as VoiceActivityEvent
       state.selfSpeaking = self_speaking
       state.speakingPeers = new Set(speaking)
     })
   )
 
   unlisteners.push(
-    await listen<number>('mic-test-level', (event) => {
-      state.micTestLevel = event.payload
+    engine.on('mic-test-level', (level: unknown) => {
+      state.micTestLevel = level as number
     })
   )
 
   unlisteners.push(
-    await listen<ChatMessage>('chat-message', (event) => {
-      state.messages.push(event.payload)
+    engine.on('chat-message', (payload: unknown) => {
+      const msg = payload as ChatMessage
+      state.messages.push(msg)
       if (state.activeRoomTab !== 'chat') {
         state.chatUnread++
       }
@@ -156,8 +153,8 @@ export async function setupListeners(): Promise<UnlistenFn[]> {
   )
 
   unlisteners.push(
-    await listen<PeerMuteEvent>('peer-mute-changed', (event) => {
-      const { peer_id, muted } = event.payload
+    engine.on('peer-mute-changed', (payload: unknown) => {
+      const { peer_id, muted } = payload as PeerMuteEvent
       if (muted) {
         state.mutedPeers.add(peer_id)
       } else {

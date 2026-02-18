@@ -1,5 +1,5 @@
 import { reactive, computed } from 'vue'
-import type { View } from '../types'
+import type { View, ChatMessage } from '../types'
 
 const state = reactive({
   currentView: 'home' as View,
@@ -27,6 +27,9 @@ const state = reactive({
   noticeBannerVisible: false,
   copyFeedback: false,
   pingMs: null as number | null,
+  messages: [] as ChatMessage[],
+  chatUnread: 0,
+  activeRoomTab: 'people' as 'people' | 'chat',
 })
 
 const peerCount = computed(() => state.peerList.size + 1)
@@ -61,6 +64,9 @@ function resetRoomState() {
   state.noticeBannerVisible = false
   state.roomNotFound = false
   state.pingMs = null
+  state.messages = []
+  state.chatUnread = 0
+  state.activeRoomTab = 'people'
 }
 
 function setStatus(text: string, statusState: 'connecting' | 'connected' | 'error' = 'connecting') {

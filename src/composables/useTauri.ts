@@ -55,6 +55,10 @@ export function useTauri() {
     return invoke('set_noise_suppression', { enabled })
   }
 
+  async function sendChatMessage(content: string) {
+    return invoke('send_chat_message', { content })
+  }
+
   async function showNotification(title: string, body: string) {
     try {
       await invoke('show_notification', { title, body })
@@ -83,6 +87,7 @@ export function useTauri() {
     startMicTest,
     stopMicTest,
     setNoiseSuppression,
+    sendChatMessage,
     showNotification,
     checkForUpdates,
     emitMuteState,

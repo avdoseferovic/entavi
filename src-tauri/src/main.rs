@@ -164,6 +164,17 @@ fn stop_mic_test(engine: tauri::State<'_, Engine>) {
     engine.stop_mic_test();
 }
 
+#[tauri::command]
+async fn send_chat_message(
+    engine: tauri::State<'_, Engine>,
+    content: String,
+) -> Result<(), String> {
+    engine
+        .send_chat_message(content)
+        .await
+        .map_err(|e| e.to_string())
+}
+
 fn show_window(app: &tauri::AppHandle) {
     // Switch to Regular so macOS gives the app keyboard focus
     #[cfg(target_os = "macos")]
@@ -289,6 +300,7 @@ fn main() {
             set_noise_suppression,
             start_mic_test,
             stop_mic_test,
+            send_chat_message,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

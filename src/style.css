@@ -332,12 +332,15 @@ input[type="text"]::placeholder {
 }
 
 /* ── Room controls ── */
+.room-controls-wrapper {
+    margin-top: auto;
+    padding-top: 12px;
+}
 .room-controls {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 16px;
-    margin-top: auto;
     padding-bottom: 4px;
 }
 
@@ -383,6 +386,34 @@ input[type="text"]::placeholder {
     border-color: #dc2626;
     color: #fff;
     opacity: 1;
+}
+
+.btn-settings-circle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 2px solid #333350;
+    background: #252538;
+    color: #888;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    padding: 0;
+}
+.btn-settings-circle:hover { border-color: #4f46e5; color: #ccc; opacity: 1; }
+.btn-settings-circle.active {
+    border-color: #4f46e5;
+    color: #eee;
+}
+
+.room-settings-dropdown {
+    background: #252538;
+    border: 1px solid #333350;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
 }
 
 /* ── Participant list ── */
@@ -465,6 +496,11 @@ input[type="text"]::placeholder {
     gap: 6px;
     margin-left: auto;
     flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.participant-item:hover .participant-actions {
+    opacity: 1;
 }
 .participant-actions button {
     padding: 4px 10px;
@@ -478,11 +514,6 @@ input[type="text"]::placeholder {
 .btn-force-mute {
     background: #f59e0b;
     color: #1a1a2e;
-}
-
-/* ── Host controls ── */
-.host-controls {
-    margin-bottom: 12px;
 }
 
 .btn-lock {
@@ -554,4 +585,114 @@ input[type="text"]::placeholder {
 .password-row .btn-lock {
     width: auto;
     white-space: nowrap;
+}
+
+/* ── Room tabs ── */
+.room-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+.room-tab {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    background: transparent;
+    color: #666;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.15s, background 0.15s;
+}
+.room-tab:hover { color: #aaa; opacity: 1; }
+.room-tab.active {
+    color: #eee;
+    background: #252538;
+}
+.chat-unread-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4f46e5;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+/* ── Chat panel ── */
+.chat-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px 0;
+    min-height: 0;
+}
+.chat-bubble {
+    max-width: 85%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.4;
+    background: #252538;
+    align-self: flex-start;
+}
+.chat-bubble.self {
+    background: #3730a3;
+    align-self: flex-end;
+}
+.chat-sender {
+    font-size: 11px;
+    color: #a5b4fc;
+    margin-bottom: 2px;
+    font-weight: 500;
+}
+.chat-content {
+    color: #eee;
+    word-break: break-word;
+}
+.chat-input-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    align-items: center;
+}
+.chat-input {
+    flex: 1;
+    margin-bottom: 0 !important;
+}
+.chat-send-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #4f46e5;
+    color: #fff;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    transition: opacity 0.15s;
+}
+.chat-send-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+.chat-send-btn:not(:disabled):hover { opacity: 0.85; }
+.chat-empty {
+    color: #555;
+    font-size: 14px;
+    text-align: center;
+    margin: auto 0;
 }
