@@ -64,8 +64,8 @@
 
   /* Typography */
   --font-serif: 'Instrument Serif', ui-serif, Georgia, serif;
-  --font-ui:    'Geist Variable', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono:  'Geist Mono Variable', ui-monospace, 'Cascadia Code', monospace;
+  --font-ui:    'Geist Variable', 'Geist', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:  'Geist Mono Variable', 'Geist Mono', ui-monospace, 'Cascadia Code', monospace;
 
   /* Spacing — 4px grid */
   --s-1:  4px;
