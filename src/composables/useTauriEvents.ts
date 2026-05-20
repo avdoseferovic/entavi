@@ -34,12 +34,22 @@ export async function setupListeners(): Promise<UnlistenFn[]> {
           if (s.locked !== undefined) {
             state.isRoomLocked = s.locked
           }
+          // Clear reconnecting state
+          if (state.isReconnecting) {
+            state.isReconnecting = false
+            state.reconnectAttempt = 0
+          }
           // Switch to room view when server confirms join
           if (state.isJoining) {
             state.isJoining = false
             state.currentView = 'room'
             showNotification('Joined Room', `Code: ${state.roomCode}`)
           }
+          break
+        case 'reconnecting':
+          state.isReconnecting = true
+          state.reconnectAttempt = s.attempt ?? 0
+          setStatus(`Reconnecting... (attempt ${state.reconnectAttempt})`, 'connecting')
           break
         case 'error':
           state.isJoining = false
@@ -152,6 +162,21 @@ export async function setupListeners(): Promise<UnlistenFn[]> {
       if (state.activeRoomTab !== 'chat') {
         state.chatUnread++
       }
+    })
+  )
+
+  unlisteners.push(
+    await listen<boolean>('shortcut-mute-toggled', (event) => {
+      state.isMuted = event.payload
+      emitMuteState(state.isMuted)
+    })
+  )
+
+  unlisteners.push(
+    await listen<boolean>('ptt-state-changed', (event) => {
+      // event.payload = true means PTT active (unmuted), false means released (muted)
+      state.isMuted = !event.payload
+      emitMuteState(state.isMuted)
     })
   )
 

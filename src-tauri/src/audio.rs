@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
@@ -22,7 +22,12 @@ pub struct AudioCapture {
 }
 
 impl AudioCapture {
-    pub fn new(device_name: Option<String>, noise_suppression: Arc<AtomicBool>) -> Result<Self> {
+    pub fn new(
+        device_name: Option<String>,
+        noise_suppression: Arc<AtomicBool>,
+        vad_threshold: Arc<AtomicU32>,
+        agc_enabled: Arc<AtomicBool>,
+    ) -> Result<Self> {
         let muted = Arc::new(AtomicBool::new(false));
         let speaking = Arc::new(AtomicBool::new(false));
         let (encoded_tx, encoded_rx) = flume::unbounded::<EncodedFrame>();
@@ -32,7 +37,7 @@ impl AudioCapture {
         std::thread::Builder::new()
             .name("audio-capture".into())
             .spawn(move || {
-                if let Err(e) = run_capture(device_name, muted_flag, speaking_flag, encoded_tx, noise_suppression) {
+                if let Err(e) = run_capture(device_name, muted_flag, speaking_flag, encoded_tx, noise_suppression, vad_threshold, agc_enabled) {
                     tracing::error!("Audio capture thread error: {e}");
                 }
             })?;
@@ -55,6 +60,8 @@ fn run_capture(
     speaking: Arc<AtomicBool>,
     encoded_tx: flume::Sender<EncodedFrame>,
     noise_suppression: Arc<AtomicBool>,
+    vad_threshold: Arc<AtomicU32>,
+    agc_enabled: Arc<AtomicBool>,
 ) -> Result<()> {
     let host = cpal::default_host();
     let device = if let Some(ref name) = device_name {
@@ -141,6 +148,12 @@ fn run_capture(
     let need_resample = device_rate != SAMPLE_RATE;
     let need_downmix = device_channels > 1;
 
+    // AGC state
+    let mut agc_gain: f32 = 1.0;
+    let target_rms: f32 = 0.1;
+    let attack_coeff: f32 = 1.0 - (-1.0 / (0.005 * SAMPLE_RATE as f32 / FRAME_SIZE as f32)).exp();
+    let release_coeff: f32 = 1.0 - (-1.0 / (0.200 * SAMPLE_RATE as f32 / FRAME_SIZE as f32)).exp();
+
     loop {
         if consumer.occupied_len() < device_frame_samples {
             std::thread::sleep(std::time::Duration::from_millis(5));
@@ -194,11 +207,25 @@ fn run_capture(
             }
         }
 
-        // Step 4: Voice activity detection (after denoising)
-        let peak = mono_48k_buf.iter().map(|s| s.abs()).fold(0.0f32, f32::max);
-        speaking.store(peak > 0.01, Ordering::Relaxed);
+        // Step 4: Automatic Gain Control (after noise suppression, before VAD)
+        if agc_enabled.load(Ordering::Relaxed) {
+            let rms = (mono_48k_buf.iter().map(|s| s * s).sum::<f32>() / FRAME_SIZE as f32).sqrt();
+            if rms > 1e-6 {
+                let desired = (target_rms / rms).clamp(0.25, 31.6);
+                let coeff = if desired < agc_gain { attack_coeff } else { release_coeff };
+                agc_gain += coeff * (desired - agc_gain);
+            }
+            for s in mono_48k_buf.iter_mut() {
+                *s = (*s * agc_gain).clamp(-1.0, 1.0);
+            }
+        }
 
-        // Step 5: Opus encode
+        // Step 5: Voice activity detection (after AGC)
+        let peak = mono_48k_buf.iter().map(|s| s.abs()).fold(0.0f32, f32::max);
+        let threshold = f32::from_bits(vad_threshold.load(Ordering::Relaxed));
+        speaking.store(peak > threshold, Ordering::Relaxed);
+
+        // Step 6: Opus encode
         match encoder.encode_float(&mono_48k_buf, &mut opus_buf) {
             Ok(len) => {
                 let frame = EncodedFrame {
@@ -242,6 +269,29 @@ pub fn list_input_devices() -> Vec<AudioDevice> {
         .collect()
 }
 
+pub fn list_output_devices() -> Vec<AudioDevice> {
+    let host = cpal::default_host();
+    let default_name = host
+        .default_output_device()
+        .and_then(|d| d.name().ok());
+
+    let devices = match host.output_devices() {
+        Ok(devs) => devs,
+        Err(e) => {
+            tracing::error!("Failed to enumerate output devices: {e}");
+            return Vec::new();
+        }
+    };
+
+    devices
+        .filter_map(|d| {
+            let name = d.name().ok()?;
+            let is_default = default_name.as_deref() == Some(&name);
+            Some(AudioDevice { name, is_default })
+        })
+        .collect()
+}
+
 // ── AudioPlayback ──
 
 pub struct AudioPlayback {
@@ -249,13 +299,13 @@ pub struct AudioPlayback {
 }
 
 impl AudioPlayback {
-    pub fn new() -> Result<Self> {
+    pub fn new(device_name: Option<String>) -> Result<Self> {
         let (tx, rx) = flume::unbounded::<Vec<f32>>();
 
         std::thread::Builder::new()
             .name("audio-playback".into())
             .spawn(move || {
-                if let Err(e) = run_playback(rx) {
+                if let Err(e) = run_playback(rx, device_name) {
                     tracing::error!("Audio playback thread error: {e}");
                 }
             })?;
@@ -275,14 +325,14 @@ pub struct MicTest {
 }
 
 impl MicTest {
-    pub fn new(device_name: Option<String>, app: AppHandle, noise_suppression: Arc<AtomicBool>) -> Result<Self> {
+    pub fn new(device_name: Option<String>, output_device_name: Option<String>, app: AppHandle, noise_suppression: Arc<AtomicBool>) -> Result<Self> {
         let stop = Arc::new(AtomicBool::new(false));
         let stop_flag = Arc::clone(&stop);
 
         std::thread::Builder::new()
             .name("mic-test".into())
             .spawn(move || {
-                if let Err(e) = run_mic_test(device_name, stop_flag, app, noise_suppression) {
+                if let Err(e) = run_mic_test(device_name, output_device_name, stop_flag, app, noise_suppression) {
                     tracing::error!("Mic test error: {e}");
                 }
             })?;
@@ -301,7 +351,7 @@ impl Drop for MicTest {
     }
 }
 
-fn run_mic_test(device_name: Option<String>, stop: Arc<AtomicBool>, app: AppHandle, noise_suppression: Arc<AtomicBool>) -> Result<()> {
+fn run_mic_test(device_name: Option<String>, output_device_name: Option<String>, stop: Arc<AtomicBool>, app: AppHandle, noise_suppression: Arc<AtomicBool>) -> Result<()> {
     let host = cpal::default_host();
 
     // ── Input device ──
@@ -318,9 +368,16 @@ fn run_mic_test(device_name: Option<String>, stop: Arc<AtomicBool>, app: AppHand
     tracing::info!("Mic test input: {:?}", in_device.name());
 
     // ── Output device ──
-    let out_device = host
-        .default_output_device()
-        .context("No output audio device found")?;
+    let out_device = if let Some(ref name) = output_device_name {
+        host.output_devices()
+            .context("Failed to enumerate output devices")?
+            .find(|d| d.name().ok().as_deref() == Some(name))
+            .or_else(|| host.default_output_device())
+            .context("No output audio device found")?
+    } else {
+        host.default_output_device()
+            .context("No output audio device found")?
+    };
 
     // ── Input stream setup ──
     let in_config = in_device.default_input_config()?;
@@ -515,11 +572,21 @@ fn run_mic_test(device_name: Option<String>, stop: Arc<AtomicBool>, app: AppHand
     Ok(())
 }
 
-fn run_playback(rx: flume::Receiver<Vec<f32>>) -> Result<()> {
+fn run_playback(rx: flume::Receiver<Vec<f32>>, device_name: Option<String>) -> Result<()> {
     let host = cpal::default_host();
-    let device = host
-        .default_output_device()
-        .context("No output audio device found")?;
+    let device = if let Some(ref name) = device_name {
+        host.output_devices()
+            .context("Failed to enumerate output devices")?
+            .find(|d| d.name().ok().as_deref() == Some(name))
+            .with_context(|| format!("Output device '{}' not found, falling back to default", name))
+            .or_else(|e| {
+                tracing::warn!("{e}");
+                host.default_output_device().context("No output audio device found")
+            })?
+    } else {
+        host.default_output_device()
+            .context("No output audio device found")?
+    };
 
     tracing::info!("Using output device: {:?}", device.name());
 

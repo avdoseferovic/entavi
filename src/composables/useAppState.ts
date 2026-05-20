@@ -10,6 +10,9 @@ const state = reactive({
   selectedMic: null as string | null,
   isMicTesting: false,
   noiseSuppression: true,
+  voiceSensitivity: 50,
+  agcEnabled: true,
+  selectedOutput: null as string | null,
   micTestLevel: 0,
   isHost: false,
   isRoomLocked: false,
@@ -19,6 +22,8 @@ const state = reactive({
   selfSpeaking: false,
   mutedPeers: new Set<string>(),
   signalingUrl: '',
+  isReconnecting: false,
+  reconnectAttempt: 0,
   isJoining: false,
   joinPasswordNeeded: false,
   roomNotFound: false,
@@ -30,6 +35,7 @@ const state = reactive({
   messages: [] as ChatMessage[],
   chatUnread: 0,
   activeRoomTab: 'people' as 'people' | 'chat',
+  showSettings: false,
 })
 
 const peerCount = computed(() => state.peerList.size + 1)
@@ -60,6 +66,8 @@ function resetRoomState() {
   state.speakingPeers = new Set()
   state.selfSpeaking = false
   state.mutedPeers = new Set()
+  state.isReconnecting = false
+  state.reconnectAttempt = 0
   state.isJoining = false
   state.noticeBannerVisible = false
   state.roomNotFound = false
@@ -67,6 +75,7 @@ function resetRoomState() {
   state.messages = []
   state.chatUnread = 0
   state.activeRoomTab = 'people'
+  state.showSettings = false
 }
 
 function setStatus(text: string, statusState: 'connecting' | 'connected' | 'error' = 'connecting') {

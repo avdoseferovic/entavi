@@ -22,7 +22,10 @@
       {
         "label": "main",
         "fullscreen": false,
-        "resizable": false,
+        "resizable": true,
+        "maximizable": true,
+        "minWidth": 360,
+        "minHeight": 500,
         "title": "Entavi",
         "width": 400,
         "height": 680,

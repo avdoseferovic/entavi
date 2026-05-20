@@ -1,5 +1,15 @@
 import { DurableObject } from "cloudflare:workers";
 
+interface Env {
+  METERED_API_KEY?: string;
+}
+
+interface TurnServer {
+  urls: string[];
+  username: string;
+  credential: string;
+}
+
 interface JoinMessage {
   type: "join";
   room_id: string;
@@ -57,7 +67,7 @@ interface Attachment {
   roomPassword: string;
 }
 
-export class Room extends DurableObject {
+export class Room extends DurableObject<Env> {
   // ── Hibernation-safe helpers ──
   // Class fields are lost on hibernation, so we derive all state from
   // WebSocket attachments which survive hibernation.
@@ -89,6 +99,49 @@ export class Room extends DurableObject {
         att.roomPassword = password;
         sock.serializeAttachment(att);
       }
+    }
+  }
+
+  private async getTurnCredentials(): Promise<TurnServer[]> {
+    const apiKey = this.env.METERED_API_KEY;
+    if (!apiKey) return [];
+
+    // Check cache (TTL: 5 minutes)
+    const cached = await this.ctx.storage.get<{ servers: TurnServer[]; expires: number }>("turn_cache");
+    if (cached && cached.expires > Date.now()) {
+      return cached.servers;
+    }
+
+    try {
+      const resp = await fetch(
+        `https://entavi.metered.live/api/v1/turn/credentials?apiKey=${apiKey}`
+      );
+      if (!resp.ok) {
+        console.error("TURN credential fetch failed:", resp.status);
+        return [];
+      }
+      const creds = (await resp.json()) as Array<{
+        urls: string | string[];
+        username: string;
+        credential: string;
+      }>;
+
+      const servers: TurnServer[] = creds.map((c) => ({
+        urls: Array.isArray(c.urls) ? c.urls : [c.urls],
+        username: c.username || "",
+        credential: c.credential || "",
+      }));
+
+      // Cache for 5 minutes
+      await this.ctx.storage.put("turn_cache", {
+        servers,
+        expires: Date.now() + 5 * 60 * 1000,
+      });
+
+      return servers;
+    } catch (e) {
+      console.error("TURN credential fetch error:", e);
+      return [];
     }
   }
 
@@ -137,6 +190,14 @@ export class Room extends DurableObject {
           return;
         }
 
+        // Check if this is a rejoin (peer reconnecting after disconnect)
+        const pendingKey = `pending_leave:${msg.peer_id}`;
+        const pendingLeave = await this.ctx.storage.get(pendingKey);
+        if (pendingLeave) {
+          // Cancel the pending leave — this is a rejoin
+          await this.ctx.storage.delete(pendingKey);
+        }
+
         // Determine if this peer is the host (first to join)
         const isHost = !hasExistingPeers;
         const locked = this.isLocked();
@@ -157,6 +218,9 @@ export class Room extends DurableObject {
           if (att?.peerId) peers.push({ peer_id: att.peerId, name: att.name, is_host: att.isHost });
         }
 
+        // Fetch TURN credentials
+        const turnServers = await this.getTurnCredentials();
+
         // Send room_joined to the new peer
         ws.send(
           JSON.stringify({
@@ -165,6 +229,7 @@ export class Room extends DurableObject {
             peers,
             is_host: isHost,
             locked,
+            turn_servers: turnServers,
           })
         );
 
@@ -324,23 +389,64 @@ export class Room extends DurableObject {
     const att = ws.deserializeAttachment() as Attachment | null;
     if (!att?.peerId) return;
 
-    // If the host disconnects, clear the room password
-    if (att.isHost) {
-      this.setPassword("");
-    }
-
-    const leftMsg = JSON.stringify({
-      type: "peer_left",
-      peer_id: att.peerId,
+    // Store pending disconnect — give 15s grace period for reconnection
+    this.ctx.storage.put(`pending_leave:${att.peerId}`, {
+      peerId: att.peerId,
+      isHost: att.isHost,
+      timestamp: Date.now(),
     });
 
-    for (const sock of this.ctx.getWebSockets()) {
-      if (sock === ws) continue;
-      try {
-        sock.send(leftMsg);
-      } catch {
-        // Socket already closed
+    // Set alarm for 15 seconds
+    this.ctx.storage.setAlarm(Date.now() + 15_000);
+  }
+
+  async alarm(): Promise<void> {
+    // Check all pending leaves
+    const entries = await this.ctx.storage.list<{
+      peerId: string;
+      isHost: boolean;
+      timestamp: number;
+    }>({ prefix: "pending_leave:" });
+
+    for (const [key, pending] of entries) {
+      // Check if peer reconnected (has active WebSocket with same peerId)
+      let reconnected = false;
+      for (const sock of this.ctx.getWebSockets()) {
+        const att = sock.deserializeAttachment() as Attachment | null;
+        if (att?.peerId === pending.peerId) {
+          reconnected = true;
+          break;
+        }
       }
+
+      if (reconnected) {
+        // Peer reconnected, cancel the pending leave
+        await this.ctx.storage.delete(key);
+        continue;
+      }
+
+      // Peer did not reconnect — broadcast peer_left
+      if (pending.isHost) {
+        this.setPassword("");
+      }
+
+      const leftMsg = JSON.stringify({
+        type: "peer_left",
+        peer_id: pending.peerId,
+      });
+
+      for (const sock of this.ctx.getWebSockets()) {
+        const att = sock.deserializeAttachment() as Attachment | null;
+        if (att?.peerId) {
+          try {
+            sock.send(leftMsg);
+          } catch {
+            // Socket already closed
+          }
+        }
+      }
+
+      await this.ctx.storage.delete(key);
     }
   }
 }

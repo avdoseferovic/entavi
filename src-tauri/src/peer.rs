@@ -12,6 +12,7 @@ use webrtc::data_channel::RTCDataChannel;
 use webrtc::ice_transport::ice_server::RTCIceServer;
 use webrtc::interceptor::registry::Registry;
 use webrtc::peer_connection::configuration::RTCConfiguration;
+use webrtc::peer_connection::offer_answer_options::RTCOfferOptions;
 use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
 use webrtc::peer_connection::sdp::session_description::RTCSessionDescription;
 use webrtc::peer_connection::RTCPeerConnection;
@@ -19,7 +20,7 @@ use webrtc::rtp_transceiver::rtp_codec::RTCRtpCodecCapability;
 use webrtc::track::track_local::track_local_static_rtp::TrackLocalStaticRTP;
 use webrtc::track::track_local::{TrackLocal, TrackLocalWriter};
 
-use crate::types::{DecodedFrame, EncodedFrame, SignalPayload, CHANNELS, FRAME_SIZE, SAMPLE_RATE};
+use crate::types::{DecodedFrame, EncodedFrame, SignalPayload, TurnServerInfo, CHANNELS, FRAME_SIZE, SAMPLE_RATE};
 
 pub struct PeerConn {
     pub peer_id: String,
@@ -38,6 +39,8 @@ impl PeerConn {
         peer_id: String,
         on_ice_candidate: flume::Sender<(String, SignalPayload)>,
         chat_tx: flume::Sender<(String, String)>,
+        turn_servers: &[TurnServerInfo],
+        conn_state_tx: flume::Sender<(String, RTCPeerConnectionState)>,
     ) -> Result<Self> {
         // Set up media engine with Opus
         let mut media_engine = MediaEngine::default();
@@ -52,17 +55,27 @@ impl PeerConn {
             .with_interceptor_registry(registry)
             .build();
 
+        let mut ice_servers = vec![
+            RTCIceServer {
+                urls: vec!["stun:stun.l.google.com:19302".to_string()],
+                ..Default::default()
+            },
+            RTCIceServer {
+                urls: vec!["stun:stun1.l.google.com:19302".to_string()],
+                ..Default::default()
+            },
+        ];
+        for turn in turn_servers {
+            ice_servers.push(RTCIceServer {
+                urls: turn.urls.clone(),
+                username: turn.username.clone(),
+                credential: turn.credential.clone(),
+                ..Default::default()
+            });
+        }
+
         let config = RTCConfiguration {
-            ice_servers: vec![
-                RTCIceServer {
-                    urls: vec!["stun:stun.l.google.com:19302".to_string()],
-                    ..Default::default()
-                },
-                RTCIceServer {
-                    urls: vec!["stun:stun1.l.google.com:19302".to_string()],
-                    ..Default::default()
-                },
-            ],
+            ice_servers,
             ..Default::default()
         };
 
@@ -113,10 +126,12 @@ impl PeerConn {
             })
         }));
 
-        // Connection state logging
+        // Connection state changes — log and notify engine
         let pid_log = peer_id.clone();
+        let conn_state_tx_clone = conn_state_tx.clone();
         connection.on_peer_connection_state_change(Box::new(move |state| {
             tracing::info!("Peer {pid_log} connection state: {state}");
+            let _ = conn_state_tx_clone.send((pid_log.clone(), state));
             if state == RTCPeerConnectionState::Failed
                 || state == RTCPeerConnectionState::Disconnected
                 || state == RTCPeerConnectionState::Closed
@@ -224,6 +239,17 @@ impl PeerConn {
         self.connection
             .set_local_description(offer.clone())
             .await?;
+        Ok(offer.sdp)
+    }
+
+    /// Create an SDP offer with ICE restart
+    pub async fn restart_ice(&self) -> Result<String> {
+        let options = RTCOfferOptions {
+            ice_restart: true,
+            ..Default::default()
+        };
+        let offer = self.connection.create_offer(Some(options)).await?;
+        self.connection.set_local_description(offer.clone()).await?;
         Ok(offer.sdp)
     }
 

@@ -16,7 +16,7 @@ use tauri::{
 };
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_updater::UpdaterExt;
-use types::AudioDevice;
+use types::{AudioDevice, ShortcutConfig};
 
 #[tauri::command]
 async fn show_notification(
@@ -155,6 +155,46 @@ fn set_noise_suppression(engine: tauri::State<'_, Engine>, enabled: bool) {
 }
 
 #[tauri::command]
+fn set_vad_threshold(engine: tauri::State<'_, Engine>, threshold: f32) {
+    engine.set_vad_threshold(threshold);
+}
+
+#[tauri::command]
+fn set_agc(engine: tauri::State<'_, Engine>, enabled: bool) {
+    engine.set_agc(enabled);
+}
+
+#[tauri::command]
+fn set_shortcut(
+    engine: tauri::State<'_, Engine>,
+    mode: String,
+    shortcut: Option<String>,
+) -> Result<(), String> {
+    engine.set_shortcut(mode, shortcut).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn get_shortcuts(engine: tauri::State<'_, Engine>) -> ShortcutConfig {
+    engine.get_shortcuts()
+}
+
+#[tauri::command]
+fn list_output_devices(engine: tauri::State<'_, Engine>) -> Vec<AudioDevice> {
+    engine.list_output_devices()
+}
+
+#[tauri::command]
+async fn set_output_device(
+    engine: tauri::State<'_, Engine>,
+    device_name: Option<String>,
+) -> Result<(), String> {
+    engine
+        .set_output_device(device_name)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn start_mic_test(engine: tauri::State<'_, Engine>) -> Result<(), String> {
     engine.start_mic_test().map_err(|e| e.to_string())
 }
@@ -208,6 +248,7 @@ fn main() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
@@ -296,8 +337,14 @@ fn main() {
             lock_room,
             list_input_devices,
             set_input_device,
+            list_output_devices,
+            set_output_device,
             set_signaling_url,
             set_noise_suppression,
+            set_vad_threshold,
+            set_agc,
+            set_shortcut,
+            get_shortcuts,
             start_mic_test,
             stop_mic_test,
             send_chat_message,

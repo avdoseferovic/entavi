@@ -67,6 +67,8 @@ pub enum SignalMessage {
         is_host: bool,
         #[serde(default)]
         locked: bool,
+        #[serde(default)]
+        turn_servers: Vec<TurnServerInfo>,
     },
     PeerJoined {
         peer_id: String,
@@ -99,6 +101,17 @@ pub enum SignalPayload {
     },
 }
 
+// ── TURN server info (provided by signaling server) ──
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TurnServerInfo {
+    pub urls: Vec<String>,
+    #[serde(default)]
+    pub username: String,
+    #[serde(default)]
+    pub credential: String,
+}
+
 // ── Call state ──
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -111,6 +124,11 @@ pub enum CallState {
         room_name: String,
         is_host: bool,
         locked: bool,
+    },
+    Reconnecting {
+        room_id: String,
+        room_name: String,
+        attempt: u32,
     },
     Error {
         message: String,
@@ -131,6 +149,16 @@ pub const EVENT_VOICE_ACTIVITY: &str = "voice-activity";
 pub const EVENT_PEER_MUTE_CHANGED: &str = "peer-mute-changed";
 pub const EVENT_MIC_TEST_LEVEL: &str = "mic-test-level";
 pub const EVENT_CHAT_MESSAGE: &str = "chat-message";
+pub const EVENT_SHORTCUT_MUTE_TOGGLED: &str = "shortcut-mute-toggled";
+pub const EVENT_PTT_STATE_CHANGED: &str = "ptt-state-changed";
+
+// ── Shortcut configuration ──
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ShortcutConfig {
+    pub toggle_mute: Option<String>,
+    pub push_to_talk: Option<String>,
+}
 
 // ── Audio device info (for mic selector) ──
 

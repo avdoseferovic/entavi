@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 use anyhow::{Context, Result};
 use tauri::{AppHandle, Emitter};
@@ -21,9 +21,14 @@ pub struct Engine {
     app: AppHandle,
     /// Persists across sessions — not inside EngineInner.
     selected_input_device: std::sync::Mutex<Option<String>>,
+    selected_output_device: std::sync::Mutex<Option<String>>,
     signaling_url: std::sync::Mutex<Option<String>>,
     mic_test: std::sync::Mutex<Option<MicTest>>,
     noise_suppression: Arc<AtomicBool>,
+    vad_threshold: Arc<AtomicU32>,
+    agc_enabled: Arc<AtomicBool>,
+    shortcut_config: std::sync::Mutex<ShortcutConfig>,
+    is_muted: Arc<AtomicBool>,
 }
 
 struct EngineInner {
@@ -41,8 +46,15 @@ struct EngineInner {
     /// Channel for chat messages received from data channels
     chat_tx: flume::Sender<(String, String)>,
     chat_rx: flume::Receiver<(String, String)>,
+    /// Channel for peer connection state changes
+    conn_state_tx: flume::Sender<(String, webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState)>,
+    conn_state_rx: flume::Receiver<(String, webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState)>,
     /// RTT measurements from signaling ping/pong
     rtt_rx: flume::Receiver<u64>,
+    /// Signaling connection status
+    signaling_status_rx: flume::Receiver<signaling::SignalingStatus>,
+    /// TURN server credentials from signaling server
+    turn_servers: Vec<TurnServerInfo>,
     is_host: bool,
     room_locked: bool,
 }
@@ -53,9 +65,14 @@ impl Engine {
             inner: Arc::new(Mutex::new(None)),
             app,
             selected_input_device: std::sync::Mutex::new(None),
+            selected_output_device: std::sync::Mutex::new(None),
             signaling_url: std::sync::Mutex::new(None),
             mic_test: std::sync::Mutex::new(None),
             noise_suppression: Arc::new(AtomicBool::new(true)),
+            vad_threshold: Arc::new(AtomicU32::new(0.01f32.to_bits())),
+            agc_enabled: Arc::new(AtomicBool::new(true)),
+            shortcut_config: std::sync::Mutex::new(ShortcutConfig::default()),
+            is_muted: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -115,15 +132,20 @@ impl Engine {
 
         // Start audio capture and playback
         let device_name = self.selected_input_device.lock().unwrap().clone();
-        let capture =
-            AudioCapture::new(device_name, Arc::clone(&self.noise_suppression)).context("Failed to start audio capture")?;
-        let playback = AudioPlayback::new().context("Failed to start audio playback")?;
+        let output_device_name = self.selected_output_device.lock().unwrap().clone();
+        let capture = AudioCapture::new(
+            device_name,
+            Arc::clone(&self.noise_suppression),
+            Arc::clone(&self.vad_threshold),
+            Arc::clone(&self.agc_enabled),
+        ).context("Failed to start audio capture")?;
+        let playback = AudioPlayback::new(output_device_name).context("Failed to start audio playback")?;
 
         // Connect to signaling server (room_id is part of the URL path)
         let base_url = self.signaling_url.lock().unwrap().clone()
             .unwrap_or_else(|| DEFAULT_SIGNALING_URL.to_string());
         let ws_url = format!("{base_url}/{room_id}");
-        let (signal_tx, signal_rx, rtt_rx) = signaling::connect(&ws_url)
+        let (signal_tx, signal_rx, rtt_rx, signaling_status_rx) = signaling::connect(&ws_url)
             .await
             .context("Failed to connect to signaling server")?;
 
@@ -144,6 +166,9 @@ impl Engine {
         // Chat message channel shared across all data channels
         let (chat_tx, chat_rx) = flume::unbounded::<(String, String)>();
 
+        // Peer connection state changes
+        let (conn_state_tx, conn_state_rx) = flume::unbounded();
+
         let inner = EngineInner {
             peer_id,
             peer_name: name,
@@ -157,7 +182,11 @@ impl Engine {
             ice_rx,
             chat_tx,
             chat_rx,
+            conn_state_tx,
+            conn_state_rx,
             rtt_rx,
+            signaling_status_rx,
+            turn_servers: Vec::new(),
             is_host: false,
             room_locked: false,
         };
@@ -209,6 +238,7 @@ impl Engine {
     }
 
     pub async fn set_muted(&self, muted: bool) -> Result<()> {
+        self.is_muted.store(muted, Ordering::Relaxed);
         let guard = self.inner.lock().await;
         if let Some(inner) = guard.as_ref() {
             inner.capture.set_muted(muted);
@@ -270,8 +300,12 @@ impl Engine {
         // If we're in a call, restart the capture thread with the new device
         let mut guard = self.inner.lock().await;
         if let Some(inner) = guard.as_mut() {
-            let new_capture =
-                AudioCapture::new(name, Arc::clone(&self.noise_suppression)).context("Failed to restart audio capture")?;
+            let new_capture = AudioCapture::new(
+                name,
+                Arc::clone(&self.noise_suppression),
+                Arc::clone(&self.vad_threshold),
+                Arc::clone(&self.agc_enabled),
+            ).context("Failed to restart audio capture")?;
             // Replace capture — old one is dropped, its thread exits when
             // the encoded_tx sender side is dropped (receiver gone).
             inner.capture = new_capture;
@@ -289,13 +323,127 @@ impl Engine {
         // Stop any existing test first
         self.stop_mic_test();
         let device_name = self.selected_input_device.lock().unwrap().clone();
-        let test = MicTest::new(device_name, self.app.clone(), Arc::clone(&self.noise_suppression))?;
+        let output_device_name = self.selected_output_device.lock().unwrap().clone();
+        let test = MicTest::new(device_name, output_device_name, self.app.clone(), Arc::clone(&self.noise_suppression))?;
         *self.mic_test.lock().unwrap() = Some(test);
         Ok(())
     }
 
     pub fn set_noise_suppression(&self, enabled: bool) {
         self.noise_suppression.store(enabled, Ordering::Relaxed);
+    }
+
+    pub fn set_vad_threshold(&self, threshold: f32) {
+        self.vad_threshold.store(threshold.to_bits(), Ordering::Relaxed);
+    }
+
+    pub fn set_agc(&self, enabled: bool) {
+        self.agc_enabled.store(enabled, Ordering::Relaxed);
+    }
+
+    pub fn get_shortcuts(&self) -> ShortcutConfig {
+        self.shortcut_config.lock().unwrap().clone()
+    }
+
+    pub fn set_shortcut(&self, mode: String, shortcut: Option<String>) -> Result<()> {
+        use tauri_plugin_global_shortcut::GlobalShortcutExt;
+
+        let mut config = self.shortcut_config.lock().unwrap();
+
+        // Unregister old shortcut for this mode
+        let old_shortcut = match mode.as_str() {
+            "toggle_mute" => config.toggle_mute.take(),
+            "push_to_talk" => config.push_to_talk.take(),
+            _ => return Err(anyhow::anyhow!("Unknown shortcut mode: {mode}")),
+        };
+
+        if let Some(ref old) = old_shortcut {
+            if let Ok(parsed) = old.parse::<tauri_plugin_global_shortcut::Shortcut>() {
+                let _ = self.app.global_shortcut().unregister(parsed);
+            }
+        }
+
+        // Register new shortcut
+        if let Some(ref shortcut_str) = shortcut {
+            let parsed: tauri_plugin_global_shortcut::Shortcut = shortcut_str
+                .parse()
+                .map_err(|e| anyhow::anyhow!("Invalid shortcut '{shortcut_str}': {e}"))?;
+
+            let app = self.app.clone();
+            let inner = Arc::clone(&self.inner);
+            let is_muted = Arc::clone(&self.is_muted);
+            let mode_clone = mode.clone();
+
+            self.app.global_shortcut().on_shortcut(parsed, move |_app, _shortcut, event| {
+                use tauri_plugin_global_shortcut::ShortcutState;
+                let app = app.clone();
+                let inner = inner.clone();
+                let is_muted = is_muted.clone();
+                let mode_clone = mode_clone.clone();
+
+                tauri::async_runtime::spawn(async move {
+                    match mode_clone.as_str() {
+                        "toggle_mute" => {
+                            if event.state == ShortcutState::Pressed {
+                                let new_muted = !is_muted.load(Ordering::Relaxed);
+                                is_muted.store(new_muted, Ordering::Relaxed);
+
+                                let guard = inner.lock().await;
+                                if let Some(inner) = guard.as_ref() {
+                                    inner.capture.set_muted(new_muted);
+                                    let _ = inner.signal_tx.send(SignalMessage::MuteState { muted: new_muted });
+                                }
+                                let _ = app.emit(EVENT_SHORTCUT_MUTE_TOGGLED, new_muted);
+                            }
+                        }
+                        "push_to_talk" => {
+                            let new_muted = event.state != ShortcutState::Pressed;
+                            is_muted.store(new_muted, Ordering::Relaxed);
+
+                            let guard = inner.lock().await;
+                            if let Some(inner) = guard.as_ref() {
+                                inner.capture.set_muted(new_muted);
+                                let _ = inner.signal_tx.send(SignalMessage::MuteState { muted: new_muted });
+                            }
+                            let _ = app.emit(EVENT_PTT_STATE_CHANGED, !new_muted);
+                        }
+                        _ => {}
+                    }
+                });
+            }).map_err(|e| anyhow::anyhow!("Failed to register shortcut: {e}"))?;
+        }
+
+        // Store the new config
+        match mode.as_str() {
+            "toggle_mute" => config.toggle_mute = shortcut,
+            "push_to_talk" => config.push_to_talk = shortcut,
+            _ => {}
+        }
+
+        Ok(())
+    }
+
+    pub fn list_output_devices(&self) -> Vec<AudioDevice> {
+        crate::audio::list_output_devices()
+    }
+
+    pub async fn set_output_device(&self, name: Option<String>) -> Result<()> {
+        {
+            let mut dev = self.selected_output_device.lock().unwrap();
+            *dev = name.clone();
+        }
+
+        // If we're in a call, restart the playback thread with the new device
+        let mut guard = self.inner.lock().await;
+        if let Some(inner) = guard.as_mut() {
+            let new_playback = AudioPlayback::new(name).context("Failed to restart audio playback")?;
+            // Replace playback — old one is dropped, its thread exits when
+            // the tx sender side is dropped (receiver gone).
+            inner.playback = new_playback;
+            tracing::info!("Restarted audio playback with new output device");
+        }
+
+        Ok(())
     }
 
     pub fn stop_mic_test(&self) {
@@ -357,20 +505,35 @@ async fn engine_loop(
     let mut va_counter: u32 = 0;
 
     loop {
-        // Get encoded audio rx, ice_rx, chat_rx, and rtt_rx from inner (if still active)
-        let (encoded_rx, ice_rx, chat_rx, rtt_rx) = {
+        // Get channels from inner (if still active)
+        let (encoded_rx, ice_rx, chat_rx, conn_state_rx, rtt_rx, signaling_status_rx) = {
             let guard = engine.lock().await;
             let Some(inner) = guard.as_ref() else {
                 break; // Engine shut down
             };
-            (inner.capture.encoded_rx.clone(), inner.ice_rx.clone(), inner.chat_rx.clone(), inner.rtt_rx.clone())
+            (
+                inner.capture.encoded_rx.clone(),
+                inner.ice_rx.clone(),
+                inner.chat_rx.clone(),
+                inner.conn_state_rx.clone(),
+                inner.rtt_rx.clone(),
+                inner.signaling_status_rx.clone(),
+            )
         };
 
         tokio::select! {
             // ── Signaling message from server ──
             msg = signal_rx.recv_async() => {
-                let Ok(msg) = msg else { break };
-                handle_signal_message(&engine, &signal_tx, &app, msg).await?;
+                match msg {
+                    Ok(msg) => {
+                        handle_signal_message(&engine, &signal_tx, &app, msg).await?;
+                    }
+                    Err(_) => {
+                        // Channel closed — signaling client dropped. Wait for status or exit.
+                        tracing::warn!("Signal rx closed, engine will exit");
+                        break;
+                    }
+                }
             }
 
             // ── Encoded audio from microphone ──
@@ -420,6 +583,83 @@ async fn engine_loop(
                                 is_self: false,
                             },
                         );
+                    }
+                }
+            }
+
+            // ── Peer connection state change ──
+            conn_state = conn_state_rx.recv_async() => {
+                if let Ok((peer_id, state)) = conn_state {
+                    use webrtc::peer_connection::peer_connection_state::RTCPeerConnectionState;
+                    if state == RTCPeerConnectionState::Failed {
+                        tracing::warn!("Peer {peer_id} connection failed, attempting ICE restart");
+                        let guard = engine.lock().await;
+                        if let Some(inner) = guard.as_ref() {
+                            if let Some(peer) = inner.peers.get(&peer_id) {
+                                match peer.restart_ice().await {
+                                    Ok(sdp) => {
+                                        let _ = signal_tx.send(SignalMessage::Signal {
+                                            to: Some(peer_id),
+                                            from: None,
+                                            payload: SignalPayload::Offer { sdp },
+                                        });
+                                    }
+                                    Err(e) => {
+                                        tracing::error!("ICE restart failed for {}: {e}", peer.peer_id);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Signaling connection status ──
+            status = signaling_status_rx.recv_async() => {
+                if let Ok(status) = status {
+                    match status {
+                        signaling::SignalingStatus::Connected => {
+                            tracing::info!("Signaling reconnected, re-sending Join");
+                            let guard = engine.lock().await;
+                            if let Some(inner) = guard.as_ref() {
+                                let _ = signal_tx.send(SignalMessage::Join {
+                                    room_id: inner.room_id.clone(),
+                                    peer_id: inner.peer_id.clone(),
+                                    name: inner.peer_name.clone(),
+                                    password: None,
+                                    create: false,
+                                });
+                            }
+                        }
+                        signaling::SignalingStatus::Disconnected => {
+                            tracing::warn!("Signaling disconnected");
+                            let guard = engine.lock().await;
+                            if let Some(inner) = guard.as_ref() {
+                                let _ = app.emit(EVENT_STATE_CHANGED, CallState::Reconnecting {
+                                    room_id: inner.room_id.clone(),
+                                    room_name: inner.room_name.clone(),
+                                    attempt: 0,
+                                });
+                            }
+                        }
+                        signaling::SignalingStatus::Reconnecting { attempt } => {
+                            tracing::info!("Signaling reconnecting, attempt {attempt}");
+                            let guard = engine.lock().await;
+                            if let Some(inner) = guard.as_ref() {
+                                let _ = app.emit(EVENT_STATE_CHANGED, CallState::Reconnecting {
+                                    room_id: inner.room_id.clone(),
+                                    room_name: inner.room_name.clone(),
+                                    attempt,
+                                });
+                            }
+                        }
+                        signaling::SignalingStatus::Failed => {
+                            tracing::error!("Signaling reconnection failed permanently");
+                            let _ = app.emit(EVENT_STATE_CHANGED, CallState::Error {
+                                message: "Connection lost — could not reconnect".to_string(),
+                            });
+                            break;
+                        }
                     }
                 }
             }
@@ -495,15 +735,16 @@ async fn handle_signal_message(
     msg: SignalMessage,
 ) -> Result<()> {
     match msg {
-        SignalMessage::RoomJoined { room_id, peers, is_host, locked } => {
-            tracing::info!("Joined room {room_id} with existing peers: {peers:?}, is_host: {is_host}, locked: {locked}");
+        SignalMessage::RoomJoined { room_id, peers, is_host, locked, turn_servers } => {
+            tracing::info!("Joined room {room_id} with existing peers: {peers:?}, is_host: {is_host}, locked: {locked}, turn_servers: {}", turn_servers.len());
 
-            // Store host/locked state
+            // Store host/locked state and TURN servers
             {
                 let mut guard = engine.lock().await;
                 if let Some(inner) = guard.as_mut() {
                     inner.is_host = is_host;
                     inner.room_locked = locked;
+                    inner.turn_servers = turn_servers;
                 }
             }
 
@@ -751,13 +992,13 @@ async fn create_peer_conn(
     engine: &Arc<Mutex<Option<EngineInner>>>,
     remote_peer_id: String,
 ) -> Result<Arc<PeerConn>> {
-    let (ice_tx, chat_tx) = {
+    let (ice_tx, chat_tx, conn_state_tx, turn_servers) = {
         let guard = engine.lock().await;
         let inner = guard.as_ref().context("Engine not active")?;
-        (inner.ice_tx.clone(), inner.chat_tx.clone())
+        (inner.ice_tx.clone(), inner.chat_tx.clone(), inner.conn_state_tx.clone(), inner.turn_servers.clone())
     };
 
-    let peer = Arc::new(PeerConn::new(remote_peer_id.clone(), ice_tx, chat_tx).await?);
+    let peer = Arc::new(PeerConn::new(remote_peer_id.clone(), ice_tx, chat_tx, &turn_servers, conn_state_tx).await?);
 
     {
         let mut guard = engine.lock().await;

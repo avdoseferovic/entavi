@@ -5,6 +5,7 @@ export { Room } from "./room";
 type Env = {
   Bindings: {
     ROOM: DurableObjectNamespace;
+    METERED_API_KEY?: string;
   };
 };
 

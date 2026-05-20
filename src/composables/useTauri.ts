@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
 import { emit } from '@tauri-apps/api/event'
-import type { AudioDevice } from '../types'
+import type { AudioDevice, ShortcutConfig } from '../types'
 
 export function useTauri() {
   async function createRoom(roomName: string, name: string, password: string | null) {
@@ -55,6 +55,30 @@ export function useTauri() {
     return invoke('set_noise_suppression', { enabled })
   }
 
+  async function setVadThreshold(threshold: number) {
+    return invoke('set_vad_threshold', { threshold })
+  }
+
+  async function setAgc(enabled: boolean) {
+    return invoke('set_agc', { enabled })
+  }
+
+  async function listOutputDevices() {
+    return invoke<AudioDevice[]>('list_output_devices')
+  }
+
+  async function setOutputDevice(deviceName: string | null) {
+    return invoke('set_output_device', { deviceName })
+  }
+
+  async function setShortcut(mode: string, shortcut: string | null) {
+    return invoke('set_shortcut', { mode, shortcut })
+  }
+
+  async function getShortcuts() {
+    return invoke<ShortcutConfig>('get_shortcuts')
+  }
+
   async function sendChatMessage(content: string) {
     return invoke('send_chat_message', { content })
   }
@@ -83,10 +107,16 @@ export function useTauri() {
     forceMutePeer,
     listInputDevices,
     setInputDevice,
+    listOutputDevices,
+    setOutputDevice,
     setSignalingUrl,
     startMicTest,
     stopMicTest,
     setNoiseSuppression,
+    setVadThreshold,
+    setAgc,
+    setShortcut,
+    getShortcuts,
     sendChatMessage,
     showNotification,
     checkForUpdates,
