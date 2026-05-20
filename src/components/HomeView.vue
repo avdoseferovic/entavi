@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { Plus, DoorOpen } from 'lucide-vue-next'
+import { Plus, DoorOpen, Settings } from 'lucide-vue-next'
 import { useAppState } from '../composables/useAppState'
-import { useTauri } from '../composables/useTauri'
-import MicSelector from './MicSelector.vue'
 
 const { state } = useAppState()
-const tauri = useTauri()
+
+const isTauriHost = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 
 defineEmits<{
   create: []
@@ -15,43 +14,25 @@ defineEmits<{
 function onDisplayNameInput() {
   localStorage.setItem('entavi:displayName', state.displayName)
 }
-
-function onSignalingUrlChange() {
-  const url = state.signalingUrl.trim()
-  if (url) {
-    localStorage.setItem('entavi:signalingUrl', url)
-    tauri.setSignalingUrl(url)
-  } else {
-    localStorage.removeItem('entavi:signalingUrl')
-    tauri.setSignalingUrl(null)
-  }
-}
-
-function toggleNoiseSuppression() {
-  state.noiseSuppression = !state.noiseSuppression
-  localStorage.setItem('entavi:noiseSuppression', String(state.noiseSuppression))
-  tauri.setNoiseSuppression(state.noiseSuppression)
-}
 </script>
 
 <template>
-  <div class="view">
-    <div class="action-row">
-      <button class="btn-primary" @click="$emit('create')">
+  <div class="view home-view">
+    <div class="home-cta-stack">
+      <button class="btn-primary home-btn-create" @click="$emit('create')">
         <Plus :size="16" />
-        Create Room
+        Start a room
       </button>
-      <button class="btn-secondary" @click="$emit('join')">
+      <button class="btn-secondary home-btn-join" @click="$emit('join')">
         <DoorOpen :size="16" />
-        Join Room
+        Join with code
       </button>
     </div>
 
-    <div class="section-divider"><span>Settings</span></div>
-
-    <div class="setting-group">
-      <label class="setting-label">Display name</label>
+    <div class="home-name-group">
+      <label class="form-label" for="home-display-name">Calling as</label>
       <input
+        id="home-display-name"
         v-model="state.displayName"
         type="text"
         placeholder="Your name"
@@ -59,27 +40,13 @@ function toggleNoiseSuppression() {
       />
     </div>
 
-    <MicSelector />
-
-    <div class="section-divider"><span>Advanced</span></div>
-
-    <div class="setting-group">
-      <label class="noise-toggle" @click="toggleNoiseSuppression">
-        <span class="toggle-track" :class="{ on: state.noiseSuppression }">
-          <span class="toggle-thumb" />
-        </span>
-        <span class="toggle-label">Noise suppression</span>
-      </label>
-    </div>
-
-    <div class="setting-group">
-      <label class="setting-label">Signaling server</label>
-      <input
-        v-model="state.signalingUrl"
-        type="text"
-        placeholder="Default (entavi-signaling.avdo.workers.dev)"
-        @change="onSignalingUrlChange"
-      />
-    </div>
+    <button
+      v-if="isTauriHost"
+      class="btn-quiet home-settings-link"
+      @click="state.showSettings = true"
+    >
+      <Settings :size="14" />
+      Settings
+    </button>
   </div>
 </template>

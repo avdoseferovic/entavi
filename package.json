@@ -20,6 +20,9 @@
     "vue-tsc": "^3.2.4"
   },
   "dependencies": {
+    "@fontsource-variable/geist": "^5.2.9",
+    "@fontsource-variable/geist-mono": "^5.2.8",
+    "@fontsource/instrument-serif": "^5.2.8",
     "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-updater": "^2.10.0",
     "lucide-vue-next": "^0.563.0",

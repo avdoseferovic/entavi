@@ -1,82 +1,53 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { Mic, MicOff, LogOut, Settings } from 'lucide-vue-next'
 import { useAppState } from '../composables/useAppState'
-import { useTauri } from '../composables/useTauri'
 
 const { state } = useAppState()
-const tauri = useTauri()
 
 defineEmits<{
   'toggle-mute': []
   leave: []
 }>()
-
-const showSettings = ref(false)
-const roomPassword = ref('')
-
-async function setRoomPassword() {
-  try {
-    if (state.isRoomLocked) {
-      await tauri.lockRoom(null)
-      roomPassword.value = ''
-    } else {
-      const pw = roomPassword.value.trim()
-      if (!pw) return
-      await tauri.lockRoom(pw)
-    }
-  } catch (err) {
-    console.error('Set password error:', err)
-  }
-}
 </script>
 
 <template>
   <div class="room-controls-wrapper">
-    <div v-if="showSettings" class="room-settings-dropdown">
-      <div class="password-row">
-        <input
-          v-model="roomPassword"
-          type="text"
-          placeholder="Room password"
-          class="input-room-password"
-          :disabled="state.isRoomLocked"
-          @keydown.enter="setRoomPassword"
-        />
-        <button
-          class="btn-lock"
-          :class="{ locked: state.isRoomLocked }"
-          @click="setRoomPassword"
-        >
-          {{ state.isRoomLocked ? 'Clear' : 'Set' }}
-        </button>
-      </div>
-    </div>
-    <div class="room-controls">
+    <div class="room-dock">
+      <!-- Settings -->
       <button
-        v-if="state.isHost"
-        class="btn-settings-circle"
-        :class="{ active: showSettings }"
-        title="Room settings"
-        @click="showSettings = !showSettings"
+        class="room-settings"
+        :class="{ active: state.showSettings }"
+        title="Settings"
+        @click="state.showSettings = !state.showSettings"
       >
-        <Settings :size="20" />
+        <Settings :size="18" />
       </button>
+
+      <!-- Mute pill (dominant action) -->
       <button
-        class="btn-mute-circle"
+        class="room-mute"
         :class="{ muted: state.isMuted }"
         :title="state.isMuted ? 'Unmute' : 'Mute'"
         @click="$emit('toggle-mute')"
       >
-        <MicOff v-if="state.isMuted" :size="22" />
-        <Mic v-else :size="22" />
+        <MicOff v-if="state.isMuted" :size="20" />
+        <Mic v-else :size="20" />
+        <span class="room-mute-label">{{ state.isMuted ? 'Unmuted' : 'Mute' }}</span>
+        <span
+          v-if="!state.isMuted"
+          class="room-mute-level"
+          :class="{ active: state.selfSpeaking }"
+          aria-hidden="true"
+        />
       </button>
+
+      <!-- Leave -->
       <button
-        class="btn-leave-circle"
+        class="room-leave"
         title="Leave room"
         @click="$emit('leave')"
       >
-        <LogOut :size="20" />
+        <LogOut :size="18" />
       </button>
     </div>
   </div>

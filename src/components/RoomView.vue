@@ -29,7 +29,7 @@ async function copyRoomCode() {
 <template>
   <div class="view">
     <div class="room-header">
-      <h2>{{ state.roomName }}</h2>
+      <h2 class="room-name">{{ state.roomName }}</h2>
       <span class="room-header-right">
         <PingIndicator />
         <span class="room-peer-count">{{ peerCountLabel }}</span>
@@ -86,7 +86,15 @@ async function copyRoomCode() {
     <ChatPanel v-if="state.activeRoomTab === 'chat'" />
 
     <div
-      class="notice-banner"
+      class="room-status-pill room-status-pill--reconnecting"
+      :class="{ visible: state.isReconnecting }"
+    >
+      <span class="reconnecting-pulse" />
+      Reconnecting… (attempt {{ state.reconnectAttempt }})
+    </div>
+
+    <div
+      class="room-status-pill room-status-pill--muted"
       :class="{ visible: state.noticeBannerVisible }"
     >
       You were muted by the host

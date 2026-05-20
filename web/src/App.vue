@@ -144,8 +144,8 @@ onUnmounted(() => {
     <div class="window-body">
       <div class="container">
         <header v-if="state.currentView === 'home'">
-          <h1>Entavi</h1>
-          <p class="subtitle">Peer-to-peer voice calls</p>
+          <h1 class="wordmark">Entavi</h1>
+          <p class="wordmark-eyebrow">Peer-to-peer voice</p>
         </header>
 
         <HomeView

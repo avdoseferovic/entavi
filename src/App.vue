@@ -9,6 +9,7 @@ import HomeView from './components/HomeView.vue'
 import CreateView from './components/CreateView.vue'
 import JoinView from './components/JoinView.vue'
 import RoomView from './components/RoomView.vue'
+import SettingsModal from './components/SettingsModal.vue'
 
 const { state, resetRoomState, setStatus, getDisplayName } = useAppState()
 const tauri = useTauri()
@@ -97,6 +98,42 @@ onMounted(async () => {
   }
   tauri.setNoiseSuppression(state.noiseSuppression)
 
+  // Restore voice sensitivity
+  const savedVoiceSensitivity = localStorage.getItem('entavi:voiceSensitivity')
+  if (savedVoiceSensitivity !== null) {
+    state.voiceSensitivity = parseInt(savedVoiceSensitivity)
+  }
+  const vadThreshold = Math.pow(10, -4 + 3 * state.voiceSensitivity / 100)
+  tauri.setVadThreshold(vadThreshold)
+
+  // Restore AGC
+  const savedAgc = localStorage.getItem('entavi:agc')
+  if (savedAgc !== null) {
+    state.agcEnabled = savedAgc !== 'false'
+  }
+  tauri.setAgc(state.agcEnabled)
+
+  // Restore output device
+  const savedOutputDevice = localStorage.getItem('entavi:outputDevice')
+  if (savedOutputDevice) {
+    state.selectedOutput = savedOutputDevice
+    tauri.setOutputDevice(savedOutputDevice)
+  }
+
+  // Restore keyboard shortcuts
+  const savedToggleMute = localStorage.getItem('entavi:shortcutToggleMute')
+  if (savedToggleMute) {
+    tauri.setShortcut('toggle_mute', savedToggleMute).catch(() => {
+      localStorage.removeItem('entavi:shortcutToggleMute')
+    })
+  }
+  const savedPushToTalk = localStorage.getItem('entavi:shortcutPushToTalk')
+  if (savedPushToTalk) {
+    tauri.setShortcut('push_to_talk', savedPushToTalk).catch(() => {
+      localStorage.removeItem('entavi:shortcutPushToTalk')
+    })
+  }
+
   unlisteners = await setupListeners()
   window.addEventListener('entavi:tray-toggle-mute', onTrayToggleMute)
 
@@ -113,9 +150,9 @@ onUnmounted(() => {
 <template>
   <div class="container">
     <header v-if="state.currentView === 'home'">
-      <h1>Entavi</h1>
-      <p class="subtitle">Peer-to-peer voice calls</p>
-      <p v-if="appVersion" class="version">v{{ appVersion }}</p>
+      <h1 class="wordmark">Entavi</h1>
+      <p class="wordmark-eyebrow">Peer-to-peer voice</p>
+      <p v-if="appVersion" class="version-pill">v{{ appVersion }}</p>
     </header>
 
     <HomeView
@@ -137,6 +174,11 @@ onUnmounted(() => {
       v-if="state.currentView === 'room'"
       @toggle-mute="toggleMute"
       @leave="leaveRoom"
+    />
+
+    <SettingsModal
+      v-if="state.showSettings"
+      @close="state.showSettings = false"
     />
   </div>
 </template>
