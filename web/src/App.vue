@@ -133,13 +133,17 @@ onUnmounted(() => {
 
 <template>
   <div class="window-shell" ref="windowEl">
-    <div class="titlebar" @mousedown="onTitleBarDown">
-      <span class="titlebar-title">Entavi</span>
+    <div
+      class="titlebar"
+      :class="{ 'is-live': state.currentView === 'room' && !state.isReconnecting }"
+      @mousedown="onTitleBarDown"
+    >
       <div class="titlebar-dots">
         <span class="dot dot-red" />
         <span class="dot dot-yellow" />
         <span class="dot dot-green" />
       </div>
+      <span class="titlebar-title">entavi</span>
     </div>
     <div class="window-body">
       <div class="container">

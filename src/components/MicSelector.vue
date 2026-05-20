@@ -10,21 +10,15 @@ const tauri = useTauri()
 const devices = ref<AudioDevice[]>([])
 
 async function loadDevices() {
-  try {
-    devices.value = await tauri.listInputDevices()
-  } catch (err) {
-    console.error('Failed to load mic devices:', err)
-  }
+  try { devices.value = await tauri.listInputDevices() }
+  catch (err) { console.error('Failed to load mic devices:', err) }
 }
 
 async function onDeviceChange(e: Event) {
   const value = (e.target as HTMLSelectElement).value
   state.selectedMic = value || null
   tauri.setInputDevice(state.selectedMic)
-  if (state.isMicTesting) {
-    tauri.stopMicTest()
-    tauri.startMicTest()
-  }
+  if (state.isMicTesting) { tauri.stopMicTest(); tauri.startMicTest() }
 }
 
 async function toggleMicTest() {
@@ -33,13 +27,20 @@ async function toggleMicTest() {
     state.isMicTesting = false
     state.micTestLevel = 0
   } else {
-    try {
-      await tauri.startMicTest()
-      state.isMicTesting = true
-    } catch (err) {
-      console.error('Mic test error:', err)
-    }
+    try { await tauri.startMicTest(); state.isMicTesting = true }
+    catch (err) { console.error('Mic test error:', err) }
   }
+}
+
+// Segmented VU meter: 12 cells, each 0–1 threshold
+const CELL_COUNT = 12
+function cellActive(i: number): boolean {
+  return state.isMicTesting && state.micTestLevel * CELL_COUNT > i
+}
+function cellColor(i: number): string {
+  if (i >= 10) return 'var(--danger)'
+  if (i >= 8) return 'var(--warning)'
+  return 'var(--success)'
 }
 
 onMounted(loadDevices)
@@ -47,26 +48,24 @@ onMounted(loadDevices)
 
 <template>
   <div class="mic-selector">
-    <label>Microphone</label>
+    <label class="setting-label">Microphone</label>
     <select :value="state.selectedMic ?? ''" @change="onDeviceChange">
       <option value="">System Default</option>
-      <option
-        v-for="dev in devices"
-        :key="dev.name"
-        :value="dev.name"
-      >
+      <option v-for="dev in devices" :key="dev.name" :value="dev.name">
         {{ dev.is_default ? `${dev.name} (default)` : dev.name }}
       </option>
     </select>
-    <button
-      class="btn-mic-test"
-      :class="{ active: state.isMicTesting }"
-      @click="toggleMicTest"
-    >
+    <button class="btn-mic-test" :class="{ active: state.isMicTesting }" @click="toggleMicTest">
       {{ state.isMicTesting ? 'Stop Test' : 'Test Mic' }}
     </button>
-    <div class="mic-level-meter">
-      <div class="mic-level-bar" :style="{ width: state.isMicTesting ? (state.micTestLevel * 100) + '%' : '0%' }" />
+    <!-- Segmented VU meter (12 cells) -->
+    <div class="vu-meter" aria-hidden="true">
+      <div
+        v-for="i in CELL_COUNT"
+        :key="i"
+        class="vu-cell"
+        :style="{ background: cellActive(i - 1) ? cellColor(i - 1) : 'var(--bg-elev)' }"
+      />
     </div>
   </div>
 </template>

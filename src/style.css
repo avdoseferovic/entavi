@@ -941,6 +941,60 @@ input[type="text"]:disabled, input[type="password"]:disabled { opacity: 0.5; cur
 .btn-settings-circle:hover { border-color: var(--accent); color: var(--fg-1); }
 .btn-settings-circle.active { border-color: var(--accent); color: var(--fg-0); }
 
+/* ── Settings modal slide-up transition ── */
+.modal-slide-enter-active {
+  transition: transform var(--dur) var(--ease-out), opacity var(--dur-fast);
+}
+.modal-slide-leave-active {
+  transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast);
+}
+.modal-slide-enter-from,
+.modal-slide-leave-to {
+  opacity: 0;
+}
+.modal-slide-enter-from .settings-modal,
+.modal-slide-leave-to .settings-modal {
+  transform: translateY(20px);
+}
+.modal-slide-enter-to .settings-modal,
+.modal-slide-leave-from .settings-modal {
+  transform: translateY(0);
+}
+
+/* ── Settings section eyebrow ── */
+.settings-section-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg-2);
+  margin-bottom: var(--s-3);
+  margin-top: var(--s-4);
+}
+.settings-section-eyebrow:first-child { margin-top: 0; }
+
+/* ── Segmented VU meter ── */
+.vu-meter {
+  display: flex;
+  gap: 2px;
+  margin-top: var(--s-2);
+  height: 6px;
+}
+.vu-cell {
+  flex: 1;
+  border-radius: 1px;
+  transition: background 0.06s linear;
+}
+
+/* ── Host controls card (elevated) ── */
+.host-controls {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--s-3);
+}
+
 /* ── Settings modal ── */
 .settings-overlay {
   position: fixed;

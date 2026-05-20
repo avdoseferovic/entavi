@@ -102,14 +102,14 @@ Type: Feature
 - [x] Task 1: Design system foundation — tokens, fonts, base styles
 - [x] Task 2: Entry flow — HomeView, CreateView, JoinView, App header
 - [x] Task 3: Room screen core — RoomView, ParticipantItem, PingIndicator
-- [ ] Task 4: Room interactions — RoomControls, ChatPanel, banners
-- [ ] Task 5: Settings modal + form controls (toggles, sliders, selects, shortcuts)
+- [x] Task 4: Room interactions — RoomControls, ChatPanel, banners
+- [x] Task 5: Settings modal + form controls (toggles, sliders, selects, shortcuts)
 - [ ] Task 6: Webapp window shell + titlebar
 - [ ] Task 7: Website foundation — extract CSS, nav, hero, app preview
 - [ ] Task 8: Website body sections — features, how-it-works, security
 - [ ] Task 9: Website tail + responsive + motion polish — self-host, FAQ, footer
 
-**Total Tasks:** 9 | **Completed:** 3 | **Remaining:** 6
+**Total Tasks:** 9 | **Completed:** 5 | **Remaining:** 4
 
 ## Implementation Tasks
 

@@ -1,8 +1,9 @@
 /* ── Web-only: desktop window simulation ── */
 
 body {
-    /* Override shared style.css: don't fill viewport, just center the window */
-    background: #0f0f1a;
+    background:
+        radial-gradient(800px at 50% 30%, rgba(124, 108, 255, 0.05), transparent 60%),
+        #0a0a12;
     height: 100vh;
     display: flex;
     align-items: center;
@@ -16,11 +17,12 @@ body {
     margin: auto;
     width: 380px;
     height: 600px;
-    border-radius: 12px;
+    border-radius: 14px;
     overflow: hidden;
     box-shadow:
-        0 25px 60px rgba(0, 0, 0, 0.5),
-        0 0 0 1px rgba(255, 255, 255, 0.06);
+        0 1px 0 rgba(255, 255, 255, 0.04) inset,
+        0 30px 80px -20px rgba(0, 0, 0, 0.7),
+        0 0 0 1px rgba(255, 255, 255, 0.05);
     display: flex;
     flex-direction: column;
 }
@@ -28,7 +30,7 @@ body {
 /* ── Title bar ── */
 .titlebar {
     height: 36px;
-    background: #16162a;
+    background: #15151f;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -39,17 +41,17 @@ body {
     border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-.titlebar:active {
-    cursor: grabbing;
-}
+.titlebar:active { cursor: grabbing; }
 
 .titlebar-title {
+    font-family: 'Geist Variable', system-ui, sans-serif;
     font-size: 12px;
-    font-weight: 500;
-    color: #555;
-    letter-spacing: 0.3px;
+    font-weight: 400;
+    color: #4d4b66;
+    letter-spacing: 0.02em;
 }
 
+/* Traffic-light dots — left side */
 .titlebar-dots {
     display: flex;
     gap: 7px;
@@ -60,20 +62,26 @@ body {
     height: 11px;
     border-radius: 50%;
 }
-.dot-red    { background: #ff5f57; }
-.dot-yellow { background: #febc2e; }
-.dot-green  { background: #28c840; }
+/* Muted versions (not in a room) */
+.dot-red    { background: rgba(255, 95,  87, 0.5); }
+.dot-yellow { background: rgba(254, 188, 46, 0.5); }
+.dot-green  { background: rgba(40,  200, 64, 0.3); }
 
-/* ── Window body: hosts the app ── */
+/* Live state: green dot becomes the active indicator */
+.titlebar.is-live .dot-green {
+    background: #4ade80;
+    box-shadow: 0 0 5px rgba(74, 222, 128, 0.5);
+}
+
+/* ── Window body ── */
 .window-body {
     flex: 1;
     min-height: 0;
     overflow: hidden;
-    background: #1a1a2e;
+    background: #0f0f17;
 }
 
-/* Override shared styles so they fit inside the window, not the viewport */
 .window-body .container {
     height: 100%;
-    padding: 24px 24px 20px;
+    padding: 28px 28px 24px;
 }
