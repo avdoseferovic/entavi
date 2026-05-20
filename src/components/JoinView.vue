@@ -31,8 +31,9 @@ function goBack() {
 <template>
   <div class="view join-view">
     <div class="entry-form">
-      <p class="form-label">Room code</p>
+      <label class="form-label" for="join-room-code">Room code</label>
       <input
+        id="join-room-code"
         v-model="roomId"
         type="text"
         placeholder="e.g. a1b2c3"
@@ -44,11 +45,13 @@ function goBack() {
 
       <Transition name="pw-reveal">
         <div v-if="state.joinPasswordNeeded || password" class="password-group">
-          <p class="form-label password-hint">This room is password-protected</p>
+          <label class="form-label password-hint" for="join-password">This room is password-protected</label>
           <input
+            id="join-password"
             v-model="password"
-            type="text"
+            type="password"
             placeholder="Room password"
+            autocomplete="current-password"
             :disabled="state.isJoining"
             @keydown.enter="submit"
           />

@@ -168,7 +168,7 @@ header {
 .version-pill {
   font-family: var(--font-mono);
   font-size: 10px;
-  color: var(--fg-3);
+  color: var(--fg-2);
   margin-top: 4px;
 }
 
@@ -184,7 +184,7 @@ header .subtitle {
   font-size: 13px;
 }
 header .version {
-  color: var(--fg-3);
+  color: var(--fg-2);
   font-size: 11px;
   margin-top: 2px;
 }
@@ -588,29 +588,6 @@ input[type="text"]:disabled, input[type="password"]:disabled { opacity: 0.5; cur
   .peer-level-fill { animation: none; width: 60%; }
 }
 
-/* ── Overflow menu trigger (touch fallback) ── */
-.participant-overflow {
-  display: none;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-2);
-  border: 1px solid var(--border);
-  color: var(--fg-2);
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  flex-shrink: 0;
-  cursor: pointer;
-  transition: color var(--dur-fast);
-}
-.participant-overflow:hover { color: var(--fg-0); }
-
-@media (hover: none) {
-  .participant-actions { display: none; }
-  .participant-overflow { display: flex; }
-}
-
 /* ── Room header ── */
 .room-header {
   display: flex;
@@ -655,13 +632,13 @@ input[type="text"]:disabled, input[type="password"]:disabled { opacity: 0.5; cur
 .room-subtitle code {
   font-family: var(--font-mono);
   font-size: 13px;
-  color: var(--fg-3);
+  color: var(--fg-2);
   letter-spacing: 1px;
 }
 .room-subtitle .copy-btn {
   background: none;
   border: none;
-  color: var(--fg-3);
+  color: var(--fg-2);
   cursor: pointer;
   font-size: 12px;
   font-family: var(--font-ui);
@@ -815,12 +792,12 @@ input[type="text"]:disabled, input[type="password"]:disabled { opacity: 0.5; cur
   transition: border-color var(--dur-fast);
 }
 .chat-compose:focus-within { border-color: var(--accent); }
-.chat-compose .chat-input {
+.chat-compose input[type="text"].chat-input {
   flex: 1;
   background: transparent;
   border: none;
-  margin-bottom: 0;
   padding: 6px 0;
+  margin-bottom: 0;
   font-size: 14px;
   border-radius: 0;
 }
@@ -838,7 +815,7 @@ input[type="text"]:disabled, input[type="password"]:disabled { opacity: 0.5; cur
   flex-direction: column;
   align-items: center;
   gap: var(--s-2);
-  color: var(--fg-3);
+  color: var(--fg-2);
   font-size: 14px;
   text-align: center;
   margin: auto;
@@ -859,7 +836,7 @@ input[type="text"]:disabled, input[type="password"]:disabled { opacity: 0.5; cur
 }
 .chat-time {
   font-size: 10px;
-  color: var(--fg-3);
+  color: var(--fg-2);
   font-family: var(--font-mono);
 }
 .chat-time--self {
@@ -867,79 +844,6 @@ input[type="text"]:disabled, input[type="password"]:disabled { opacity: 0.5; cur
   text-align: right;
   margin-top: 2px;
 }
-
-/* ── Room controls (legacy circles — renamed in Task 4) ── */
-.room-controls-wrapper {
-  margin-top: auto;
-  padding-top: var(--s-3);
-}
-.room-controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--s-4);
-  padding-bottom: 4px;
-}
-
-.btn-mute-circle {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  background: var(--bg-2);
-  color: var(--fg-1);
-  font-size: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all var(--dur-fast);
-  padding: 0;
-}
-.btn-mute-circle:hover { border-color: var(--accent); }
-.btn-mute-circle.muted {
-  background: var(--danger-lo);
-  border-color: var(--danger-lo);
-  color: var(--fg-0);
-}
-
-.btn-leave-circle {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  background: var(--bg-2);
-  color: var(--fg-1);
-  font-size: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all var(--dur-fast);
-  padding: 0;
-}
-.btn-leave-circle:hover {
-  background: var(--danger-lo);
-  border-color: var(--danger-lo);
-  color: var(--fg-0);
-}
-
-.btn-settings-circle {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  background: var(--bg-2);
-  color: var(--fg-2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all var(--dur-fast);
-  padding: 0;
-}
-.btn-settings-circle:hover { border-color: var(--accent); color: var(--fg-1); }
-.btn-settings-circle.active { border-color: var(--accent); color: var(--fg-0); }
 
 /* ── Settings modal slide-up transition ── */
 .modal-slide-enter-active {
@@ -1226,7 +1130,7 @@ input[type="text"]:disabled, input[type="password"]:disabled { opacity: 0.5; cur
 
 /* ── Host password row ── */
 .password-row { display: flex; gap: var(--s-2); }
-.input-room-password { flex: 1; margin-bottom: 0 !important; }
+.password-row .input-room-password { flex: 1; margin-bottom: 0; }
 .password-row .btn-lock { width: auto; white-space: nowrap; }
 
 /* ── Room tabs ── */

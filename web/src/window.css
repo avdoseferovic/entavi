@@ -3,7 +3,7 @@
 body {
     background:
         radial-gradient(800px at 50% 30%, rgba(124, 108, 255, 0.05), transparent 60%),
-        #0a0a12;
+        var(--bg-0);
     height: 100vh;
     display: flex;
     align-items: center;
@@ -30,7 +30,7 @@ body {
 /* ── Title bar ── */
 .titlebar {
     height: 36px;
-    background: #15151f;
+    background: var(--bg-2);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -47,7 +47,7 @@ body {
     font-family: 'Geist Variable', system-ui, sans-serif;
     font-size: 12px;
     font-weight: 400;
-    color: #4d4b66;
+    color: var(--fg-3);
     letter-spacing: 0.02em;
 }
 
@@ -69,7 +69,7 @@ body {
 
 /* Live state: green dot becomes the active indicator */
 .titlebar.is-live .dot-green {
-    background: #4ade80;
+    background: var(--success);
     box-shadow: 0 0 5px rgba(74, 222, 128, 0.5);
 }
 
@@ -78,7 +78,7 @@ body {
     flex: 1;
     min-height: 0;
     overflow: hidden;
-    background: #0f0f17;
+    background: var(--bg-1);
 }
 
 .window-body .container {

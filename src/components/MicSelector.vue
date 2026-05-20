@@ -48,8 +48,8 @@ onMounted(loadDevices)
 
 <template>
   <div class="mic-selector">
-    <label class="setting-label">Microphone</label>
-    <select :value="state.selectedMic ?? ''" @change="onDeviceChange">
+    <label class="setting-label" for="mic-select">Microphone</label>
+    <select id="mic-select" :value="state.selectedMic ?? ''" @change="onDeviceChange">
       <option value="">System Default</option>
       <option v-for="dev in devices" :key="dev.name" :value="dev.name">
         {{ dev.is_default ? `${dev.name} (default)` : dev.name }}

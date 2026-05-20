@@ -20,7 +20,8 @@ async function loadDevices() {
 async function onDeviceChange(e: Event) {
   const value = (e.target as HTMLSelectElement).value
   state.selectedOutput = value || null
-  localStorage.setItem('entavi:outputDevice', value)
+  if (value) localStorage.setItem('entavi:outputDevice', value)
+  else localStorage.removeItem('entavi:outputDevice')
   tauri.setOutputDevice(state.selectedOutput)
   if (state.isMicTesting) {
     tauri.stopMicTest()
@@ -33,8 +34,8 @@ onMounted(loadDevices)
 
 <template>
   <div class="mic-selector">
-    <label class="setting-label">Speaker</label>
-    <select :value="state.selectedOutput ?? ''" @change="onDeviceChange">
+    <label class="setting-label" for="speaker-select">Speaker</label>
+    <select id="speaker-select" :value="state.selectedOutput ?? ''" @change="onDeviceChange">
       <option value="">System Default</option>
       <option
         v-for="dev in devices"

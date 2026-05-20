@@ -8,6 +8,7 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300..700&family=Geist+Mono:wght@300..500&display=swap">
   <link rel="stylesheet" href="styles.css">
 
   <!-- Structured data -->
@@ -122,7 +123,7 @@
         </li>
         <li><a href="https://github.com/avdoseferovic/entavi/releases/download/v0.1.5/Entavi_0.1.5_aarch64.dmg" class="nav-cta">Download</a></li>
       </ul>
-      <button class="mobile-menu-btn" onclick="document.getElementById('navLinks').classList.toggle('open')" aria-label="Toggle menu">
+      <button class="mobile-menu-btn" onclick="const l=document.getElementById('navLinks');const o=l.classList.toggle('open');this.setAttribute('aria-expanded',o)" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
     </div>
@@ -171,19 +172,19 @@
           <div class="preview-divider"></div>
           <div class="preview-participants">
             <div class="preview-peer">
-              <span class="preview-peer-avatar" style="background:rgba(124,108,255,0.18);color:#9a8dff">AX</span>
+              <span class="preview-peer-avatar preview-peer-avatar--indigo">AX</span>
               <span>Alex</span>
               <span class="preview-peer-level"></span>
             </div>
             <div class="preview-peer">
-              <span class="preview-peer-avatar" style="background:rgba(74,222,128,0.15);color:#4ade80">MA</span>
+              <span class="preview-peer-avatar preview-peer-avatar--green">MA</span>
               <span>Maria</span>
             </div>
             <div class="preview-peer">
-              <span class="preview-peer-avatar" style="background:rgba(245,158,11,0.15);color:#f59e0b">YO</span>
+              <span class="preview-peer-avatar preview-peer-avatar--amber">YO</span>
               <span>You</span>
-              <span style="font-size:10px;color:var(--fg-3);margin-left:2px">(You)</span>
-              <span class="preview-peer-level" style="animation-delay:300ms"></span>
+              <span class="preview-peer-self">(You)</span>
+              <span class="preview-peer-level preview-peer-level--delayed"></span>
             </div>
           </div>
           <div class="preview-dock">
@@ -379,7 +380,7 @@ cd entavi/signaling-server &amp;&amp; npm install</code>
           <span class="deploy-step-num">03</span>
           <div class="deploy-step-content">
             <h3>Configure</h3>
-            <p>Edit <code style="font-family:var(--font-mono);font-size:0.85em;background:var(--bg-2);padding:2px 6px;border-radius:4px;border:1px solid var(--border)">wrangler.toml</code> and set the <code style="font-family:var(--font-mono);font-size:0.85em;background:var(--bg-2);padding:2px 6px;border-radius:4px;border:1px solid var(--border)">name</code> field to your preferred worker name.</p>
+            <p>Edit <code class="inline-code">wrangler.toml</code> and set the <code class="inline-code">name</code> field to your preferred worker name.</p>
           </div>
         </div>
         <div class="deploy-step">
@@ -397,7 +398,7 @@ npm run deploy</code>
           <span class="deploy-step-num">05</span>
           <div class="deploy-step-content">
             <h3>Connect the app</h3>
-            <p>Copy your worker URL (e.g. <code style="font-family:var(--font-mono);font-size:0.85em;background:var(--bg-2);padding:2px 6px;border-radius:4px;border:1px solid var(--border)">wss://your-worker.workers.dev/ws</code>), open Entavi, and paste it into the <strong>Signaling server</strong> field under Advanced settings.</p>
+            <p>Copy your worker URL (e.g. <code class="inline-code">wss://your-worker.workers.dev/ws</code>), open Entavi, and paste it into the <strong>Signaling server</strong> field under Advanced settings.</p>
           </div>
         </div>
       </div>

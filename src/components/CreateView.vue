@@ -20,19 +20,22 @@ function submit() {
 <template>
   <div class="view create-view">
     <div class="entry-form">
-      <p class="form-label">Room name</p>
+      <label class="form-label" for="create-room-name">Room name</label>
       <input
+        id="create-room-name"
         v-model="roomName"
         type="text"
         placeholder="e.g. Team Standup"
         autofocus
         @keydown.enter="submit"
       />
-      <p class="form-label">Password <span class="form-label-opt">(optional)</span></p>
+      <label class="form-label" for="create-password">Password <span class="form-label-opt">(optional)</span></label>
       <input
+        id="create-password"
         v-model="password"
-        type="text"
+        type="password"
         placeholder="Leave empty for open room"
+        autocomplete="new-password"
         @keydown.enter="submit"
       />
       <button class="btn-primary entry-submit-btn" @click="submit">Create</button>

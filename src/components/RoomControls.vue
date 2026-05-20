@@ -18,6 +18,7 @@ defineEmits<{
         class="room-settings"
         :class="{ active: state.showSettings }"
         title="Settings"
+        aria-label="Settings"
         @click="state.showSettings = !state.showSettings"
       >
         <Settings :size="18" />
@@ -27,12 +28,14 @@ defineEmits<{
       <button
         class="room-mute"
         :class="{ muted: state.isMuted }"
-        :title="state.isMuted ? 'Unmute' : 'Mute'"
+        :title="state.isMuted ? 'Unmute microphone' : 'Mute microphone'"
+        :aria-label="state.isMuted ? 'Unmute microphone' : 'Mute microphone'"
+        :aria-pressed="state.isMuted"
         @click="$emit('toggle-mute')"
       >
         <MicOff v-if="state.isMuted" :size="20" />
         <Mic v-else :size="20" />
-        <span class="room-mute-label">{{ state.isMuted ? 'Unmuted' : 'Mute' }}</span>
+        <span class="room-mute-label">{{ state.isMuted ? 'Unmute' : 'Mute' }}</span>
         <span
           v-if="!state.isMuted"
           class="room-mute-level"
@@ -45,6 +48,7 @@ defineEmits<{
       <button
         class="room-leave"
         title="Leave room"
+        aria-label="Leave room"
         @click="$emit('leave')"
       >
         <LogOut :size="18" />

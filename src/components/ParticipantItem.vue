@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Crown, MicOff, MoreHorizontal } from 'lucide-vue-next'
+import { Crown, MicOff } from 'lucide-vue-next'
 import { useAppState } from '../composables/useAppState'
 import { useTauri } from '../composables/useTauri'
 
@@ -67,15 +67,10 @@ async function forceMute() {
     <!-- Muted indicator -->
     <span v-if="isMutedPeer" class="muted-indicator"><MicOff :size="13" /></span>
 
-    <!-- Host actions: hover (desktop) + overflow (touch) -->
-    <template v-if="state.isHost && !isSelf && peerId">
-      <div class="participant-actions">
-        <button class="btn-force-mute" @click="forceMute">Mute</button>
-        <button class="btn-kick" @click="kick">Kick</button>
-      </div>
-      <button class="participant-overflow" title="More" @click.stop>
-        <MoreHorizontal :size="14" />
-      </button>
-    </template>
+    <!-- Host actions: hover (desktop) — visible on touch via media query -->
+    <div v-if="state.isHost && !isSelf && peerId" class="participant-actions">
+      <button class="btn-force-mute" :aria-label="`Mute ${name}`" @click="forceMute">Mute</button>
+      <button class="btn-kick" :aria-label="`Kick ${name}`" @click="kick">Kick</button>
+    </div>
   </div>
 </template>

@@ -9,7 +9,7 @@ import ChatPanel from './ChatPanel.vue'
 
 const { state, peerCountLabel, getDisplayName } = useAppState()
 
-const copyFeedback = ref(false)
+const copyFeedback = ref<'idle' | 'ok' | 'fail'>('idle')
 
 defineEmits<{
   'toggle-mute': []
@@ -20,9 +20,12 @@ async function copyRoomCode() {
   if (!state.roomCode) return
   try {
     await navigator.clipboard.writeText(state.roomCode)
-    copyFeedback.value = true
-    setTimeout(() => { copyFeedback.value = false }, 1500)
-  } catch (_) { /* ignore */ }
+    copyFeedback.value = 'ok'
+  } catch (err) {
+    console.warn('Clipboard write failed:', err)
+    copyFeedback.value = 'fail'
+  }
+  setTimeout(() => { copyFeedback.value = 'idle' }, 1500)
 }
 </script>
 
@@ -37,11 +40,17 @@ async function copyRoomCode() {
     </div>
     <div class="room-subtitle">
       <code>{{ state.roomCode }}</code>
-      <span class="copy-btn" title="Copy to clipboard" @click="copyRoomCode">
-        <Check v-if="copyFeedback" :size="14" />
+      <button
+        type="button"
+        class="copy-btn"
+        title="Copy room code to clipboard"
+        aria-label="Copy room code to clipboard"
+        @click="copyRoomCode"
+      >
+        <Check v-if="copyFeedback === 'ok'" :size="14" />
         <Copy v-else :size="14" />
-        {{ copyFeedback ? 'Copied!' : 'Copy' }}
-      </span>
+        {{ copyFeedback === 'ok' ? 'Copied!' : copyFeedback === 'fail' ? 'Failed' : 'Copy' }}
+      </button>
     </div>
     <div class="room-divider"></div>
 

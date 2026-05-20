@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useTauri } from '../composables/useTauri'
 
 const tauri = useTauri()
@@ -19,9 +19,17 @@ function startRecording(mode: string) {
   window.addEventListener('keydown', onKeyDown)
 }
 
+function stopRecording() {
+  recording.value = null
+  window.removeEventListener('keydown', onKeyDown)
+}
+
 function onKeyDown(e: KeyboardEvent) {
   e.preventDefault()
   e.stopPropagation()
+
+  // Cancel on Escape
+  if (e.key === 'Escape') { stopRecording(); return }
 
   // Ignore modifier-only keys
   if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return
@@ -53,9 +61,13 @@ function onKeyDown(e: KeyboardEvent) {
     tauri.setShortcut('push_to_talk', shortcutStr)
   }
 
-  recording.value = null
-  window.removeEventListener('keydown', onKeyDown)
+  stopRecording()
 }
+
+onUnmounted(() => {
+  // Ensure listener is removed if Settings closes mid-recording
+  window.removeEventListener('keydown', onKeyDown)
+})
 
 function clearShortcut(mode: string) {
   if (mode === 'toggle_mute') {
@@ -84,6 +96,7 @@ function clearShortcut(mode: string) {
       <button
         v-if="toggleMuteShortcut"
         class="shortcut-clear"
+        aria-label="Clear toggle mute shortcut"
         @click="clearShortcut('toggle_mute')"
       >&times;</button>
     </div>
@@ -99,6 +112,7 @@ function clearShortcut(mode: string) {
       <button
         v-if="pushToTalkShortcut"
         class="shortcut-clear"
+        aria-label="Clear push-to-talk shortcut"
         @click="clearShortcut('push_to_talk')"
       >&times;</button>
     </div>

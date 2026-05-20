@@ -59,10 +59,19 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
 <template>
   <Transition name="modal-slide">
     <div class="settings-overlay" @click="onOverlayClick">
-      <div class="settings-modal">
+      <div
+        class="settings-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-modal-title"
+      >
         <div class="settings-modal-header">
-          <h2>Settings</h2>
-          <button class="settings-close-btn" @click="emit('close')">
+          <h2 id="settings-modal-title">Settings</h2>
+          <button
+            class="settings-close-btn"
+            aria-label="Close settings"
+            @click="emit('close')"
+          >
             <X :size="16" />
           </button>
         </div>
@@ -72,10 +81,11 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
           <MicSelector />
           <SpeakerSelector />
           <div class="setting-group">
-            <label class="setting-label">Voice sensitivity</label>
+            <label class="setting-label" for="voice-sensitivity">Voice sensitivity</label>
             <div class="range-row">
               <span class="range-label-left">More</span>
               <input
+                id="voice-sensitivity"
                 type="range" min="0" max="100"
                 :value="state.voiceSensitivity"
                 @input="onVoiceSensitivityChange"
@@ -86,20 +96,32 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
 
           <p class="settings-section-eyebrow">02 / Processing</p>
           <div class="setting-group">
-            <label class="noise-toggle" @click="toggleNoiseSuppression">
+            <button
+              type="button"
+              class="noise-toggle"
+              role="switch"
+              :aria-checked="state.noiseSuppression"
+              @click="toggleNoiseSuppression"
+            >
               <span class="toggle-track" :class="{ on: state.noiseSuppression }">
                 <span class="toggle-thumb" />
               </span>
               <span class="toggle-label">Noise suppression</span>
-            </label>
+            </button>
           </div>
           <div class="setting-group">
-            <label class="noise-toggle" @click="toggleAgc">
+            <button
+              type="button"
+              class="noise-toggle"
+              role="switch"
+              :aria-checked="state.agcEnabled"
+              @click="toggleAgc"
+            >
               <span class="toggle-track" :class="{ on: state.agcEnabled }">
                 <span class="toggle-thumb" />
               </span>
               <span class="toggle-label">Auto gain control</span>
-            </label>
+            </button>
           </div>
 
           <p class="settings-section-eyebrow">03 / Shortcuts</p>
@@ -112,8 +134,9 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
 
           <p class="settings-section-eyebrow">05 / Advanced</p>
           <div class="setting-group">
-            <label class="setting-label">Signaling server</label>
+            <label class="setting-label" for="signaling-url">Signaling server</label>
             <input
+              id="signaling-url"
               v-model="state.signalingUrl"
               type="text"
               placeholder="Default (entavi-signaling.avdo.workers.dev)"
