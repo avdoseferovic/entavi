@@ -104,12 +104,12 @@ Type: Feature
 - [x] Task 3: Room screen core — RoomView, ParticipantItem, PingIndicator
 - [x] Task 4: Room interactions — RoomControls, ChatPanel, banners
 - [x] Task 5: Settings modal + form controls (toggles, sliders, selects, shortcuts)
-- [ ] Task 6: Webapp window shell + titlebar
-- [ ] Task 7: Website foundation — extract CSS, nav, hero, app preview
-- [ ] Task 8: Website body sections — features, how-it-works, security
-- [ ] Task 9: Website tail + responsive + motion polish — self-host, FAQ, footer
+- [x] Task 6: Webapp window shell + titlebar
+- [x] Task 7: Website foundation — extract CSS, nav, hero, app preview
+- [x] Task 8: Website body sections — features, how-it-works, security
+- [x] Task 9: Website tail + responsive + motion polish — self-host, FAQ, footer
 
-**Total Tasks:** 9 | **Completed:** 5 | **Remaining:** 4
+**Total Tasks:** 9 | **Completed:** 9 | **Remaining:** 0
 
 ## Implementation Tasks
 
