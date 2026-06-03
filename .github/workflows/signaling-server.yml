@@ -1,0 +1,37 @@
+name: Signaling Server
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "signaling-server/**"
+      - ".github/workflows/signaling-server.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to Cloudflare Workers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: signaling-server/package-lock.json
+
+      - name: Install dependencies
+        working-directory: signaling-server
+        run: npm ci
+
+      - name: Publish to Cloudflare Workers
+        working-directory: signaling-server
+        run: npm run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

@@ -20,3 +20,4 @@ gen/
 .env
 .env.*
 .wrangler/
+.agents
