@@ -19,7 +19,6 @@
     "core:window:allow-show",
     "core:window:allow-set-focus",
     "core:window:allow-center",
-    "updater:default",
-    "global-shortcut:default"
+    "updater:default"
   ]
 }

@@ -16,7 +16,7 @@ use tauri::{
 };
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_updater::UpdaterExt;
-use types::{AudioDevice, ShortcutConfig};
+use types::AudioDevice;
 
 #[tauri::command]
 async fn show_notification(
@@ -76,10 +76,9 @@ async fn create_room(
     engine: tauri::State<'_, Engine>,
     room_name: String,
     name: String,
-    password: Option<String>,
 ) -> Result<String, String> {
     engine
-        .create_room(room_name, name, password)
+        .create_room(room_name, name)
         .await
         .map_err(|e| e.to_string())
 }
@@ -124,27 +123,6 @@ async fn set_input_device(
 }
 
 #[tauri::command]
-async fn kick_peer(engine: tauri::State<'_, Engine>, peer_id: String) -> Result<(), String> {
-    engine.kick_peer(peer_id).await.map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn force_mute_peer(engine: tauri::State<'_, Engine>, peer_id: String) -> Result<(), String> {
-    engine
-        .force_mute_peer(peer_id)
-        .await
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn lock_room(
-    engine: tauri::State<'_, Engine>,
-    password: Option<String>,
-) -> Result<(), String> {
-    engine.lock_room(password).await.map_err(|e| e.to_string())
-}
-
-#[tauri::command]
 fn set_signaling_url(engine: tauri::State<'_, Engine>, url: Option<String>) {
     engine.set_signaling_url(url);
 }
@@ -152,30 +130,6 @@ fn set_signaling_url(engine: tauri::State<'_, Engine>, url: Option<String>) {
 #[tauri::command]
 fn set_noise_suppression(engine: tauri::State<'_, Engine>, enabled: bool) {
     engine.set_noise_suppression(enabled);
-}
-
-#[tauri::command]
-fn set_vad_threshold(engine: tauri::State<'_, Engine>, threshold: f32) {
-    engine.set_vad_threshold(threshold);
-}
-
-#[tauri::command]
-fn set_agc(engine: tauri::State<'_, Engine>, enabled: bool) {
-    engine.set_agc(enabled);
-}
-
-#[tauri::command]
-fn set_shortcut(
-    engine: tauri::State<'_, Engine>,
-    mode: String,
-    shortcut: Option<String>,
-) -> Result<(), String> {
-    engine.set_shortcut(mode, shortcut).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-fn get_shortcuts(engine: tauri::State<'_, Engine>) -> ShortcutConfig {
-    engine.get_shortcuts()
 }
 
 #[tauri::command]
@@ -202,17 +156,6 @@ fn start_mic_test(engine: tauri::State<'_, Engine>) -> Result<(), String> {
 #[tauri::command]
 fn stop_mic_test(engine: tauri::State<'_, Engine>) {
     engine.stop_mic_test();
-}
-
-#[tauri::command]
-async fn send_chat_message(
-    engine: tauri::State<'_, Engine>,
-    content: String,
-) -> Result<(), String> {
-    engine
-        .send_chat_message(content)
-        .await
-        .map_err(|e| e.to_string())
 }
 
 fn show_window(app: &tauri::AppHandle) {
@@ -248,7 +191,6 @@ fn main() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
@@ -332,22 +274,14 @@ fn main() {
             join_room,
             leave_room,
             set_muted,
-            kick_peer,
-            force_mute_peer,
-            lock_room,
             list_input_devices,
             set_input_device,
             list_output_devices,
             set_output_device,
             set_signaling_url,
             set_noise_suppression,
-            set_vad_threshold,
-            set_agc,
-            set_shortcut,
-            get_shortcuts,
             start_mic_test,
             stop_mic_test,
-            send_chat_message,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

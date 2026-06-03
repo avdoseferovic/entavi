@@ -17,6 +17,11 @@ const RTT_PING_INTERVAL: Duration = Duration::from_secs(2);
 /// Maximum reconnection attempts before giving up.
 const MAX_RECONNECT_ATTEMPTS: u32 = 10;
 
+const OUTGOING_QUEUE_MESSAGES: usize = 256;
+const INCOMING_QUEUE_MESSAGES: usize = 256;
+const RTT_QUEUE_MESSAGES: usize = 8;
+const STATUS_QUEUE_MESSAGES: usize = 16;
+
 #[derive(Debug, Clone)]
 pub enum SignalingStatus {
     Connected,
@@ -38,10 +43,10 @@ pub struct SignalingClient {
 impl SignalingClient {
     pub async fn connect(url: &str) -> Result<Self> {
         // These channels persist across reconnects
-        let (outgoing_tx, outgoing_rx) = flume::unbounded::<SignalMessage>();
-        let (incoming_tx, incoming_rx) = flume::unbounded::<SignalMessage>();
-        let (rtt_tx, rtt_rx) = flume::unbounded::<u64>();
-        let (status_tx, status_rx) = flume::unbounded::<SignalingStatus>();
+        let (outgoing_tx, outgoing_rx) = flume::bounded::<SignalMessage>(OUTGOING_QUEUE_MESSAGES);
+        let (incoming_tx, incoming_rx) = flume::bounded::<SignalMessage>(INCOMING_QUEUE_MESSAGES);
+        let (rtt_tx, rtt_rx) = flume::bounded::<u64>(RTT_QUEUE_MESSAGES);
+        let (status_tx, status_rx) = flume::bounded::<SignalingStatus>(STATUS_QUEUE_MESSAGES);
 
         let url = url.to_string();
 
@@ -53,7 +58,7 @@ impl SignalingClient {
                 match connect_async(&url).await {
                     Ok((ws_stream, _)) => {
                         attempt = 0;
-                        let _ = status_tx.send(SignalingStatus::Connected);
+                        let _ = status_tx.send_async(SignalingStatus::Connected).await;
                         tracing::info!("Signaling WS connected to {url}");
 
                         let (mut ws_tx, mut ws_rx) = ws_stream.split();
@@ -92,13 +97,13 @@ impl SignalingClient {
                                                 continue;
                                             }
                                         };
-                                        if ws_tx.send(Message::Text(text.into())).await.is_err() {
+                                        if ws_tx.send(Message::Text(text)).await.is_err() {
                                             tracing::warn!("WS send failed, connection likely closed");
                                             break;
                                         }
                                     }
                                     _ = ping_interval.tick() => {
-                                        if ws_tx.send(Message::Ping(vec![].into())).await.is_err() {
+                                        if ws_tx.send(Message::Ping(vec![])).await.is_err() {
                                             break;
                                         }
                                     }
@@ -120,18 +125,20 @@ impl SignalingClient {
                                         let mut guard = ping_sent_at_read.lock().await;
                                         if let Some(sent) = guard.take() {
                                             let rtt_ms = sent.elapsed().as_millis() as u64;
-                                            let _ = rtt_tx_clone.send(rtt_ms);
+                                            let _ = rtt_tx_clone.try_send(rtt_ms);
                                         }
                                         continue;
                                     }
                                     match serde_json::from_str::<SignalMessage>(&text) {
                                         Ok(signal) => {
-                                            if incoming_tx_clone.send(signal).is_err() {
+                                            if incoming_tx_clone.send_async(signal).await.is_err() {
                                                 return; // engine dropped, exit entirely
                                             }
                                         }
                                         Err(e) => {
-                                            tracing::warn!("Failed to parse incoming signal: {e} — {text}");
+                                            tracing::warn!(
+                                                "Failed to parse incoming signal: {e} — {text}"
+                                            );
                                         }
                                     }
                                 }
@@ -146,7 +153,7 @@ impl SignalingClient {
                         write_handle.abort();
 
                         tracing::info!("Signaling WS connection closed, will attempt reconnect");
-                        let _ = status_tx.send(SignalingStatus::Disconnected);
+                        let _ = status_tx.send_async(SignalingStatus::Disconnected).await;
                     }
                     Err(e) => {
                         tracing::warn!("Signaling WS connect failed (attempt {attempt}): {e}");
@@ -156,12 +163,16 @@ impl SignalingClient {
                 // Reconnect with exponential backoff
                 attempt += 1;
                 if attempt > MAX_RECONNECT_ATTEMPTS {
-                    tracing::error!("Signaling reconnection failed after {MAX_RECONNECT_ATTEMPTS} attempts");
-                    let _ = status_tx.send(SignalingStatus::Failed);
+                    tracing::error!(
+                        "Signaling reconnection failed after {MAX_RECONNECT_ATTEMPTS} attempts"
+                    );
+                    let _ = status_tx.send_async(SignalingStatus::Failed).await;
                     break;
                 }
 
-                let _ = status_tx.send(SignalingStatus::Reconnecting { attempt });
+                let _ = status_tx
+                    .send_async(SignalingStatus::Reconnecting { attempt })
+                    .await;
 
                 let base_delay = Duration::from_secs(1) * 2u32.saturating_pow(attempt - 1);
                 let delay = base_delay.min(Duration::from_secs(30));
@@ -169,7 +180,10 @@ impl SignalingClient {
                 let jitter_ms = (delay.as_millis() as f64 * 0.2 * rand::random::<f64>()) as u64;
                 let total_delay = delay + Duration::from_millis(jitter_ms);
 
-                tracing::info!("Reconnecting in {:?} (attempt {attempt}/{MAX_RECONNECT_ATTEMPTS})", total_delay);
+                tracing::info!(
+                    "Reconnecting in {:?} (attempt {attempt}/{MAX_RECONNECT_ATTEMPTS})",
+                    total_delay
+                );
                 tokio::time::sleep(total_delay).await;
 
                 // Check if engine dropped the outgoing channel

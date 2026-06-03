@@ -1,3 +1,4 @@
+use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 
 // ── Audio constants ──
@@ -5,6 +6,13 @@ use serde::{Deserialize, Serialize};
 pub const SAMPLE_RATE: u32 = 48_000;
 pub const CHANNELS: u16 = 1; // mono
 pub const FRAME_SIZE: usize = 960; // 20ms at 48kHz
+pub type PcmFrame = [f32; FRAME_SIZE];
+
+// Keep real-time audio queues short. If processing falls behind, dropping audio
+// is preferable to unbounded memory growth and high-latency playback.
+pub const AUDIO_CAPTURE_QUEUE_FRAMES: usize = 3; // 60ms
+pub const AUDIO_DECODE_QUEUE_FRAMES: usize = 4; // 80ms
+pub const AUDIO_PLAYBACK_QUEUE_FRAMES: usize = 4; // 80ms
 
 // ── Peer info (sent in room_joined / peer_joined) ──
 
@@ -42,16 +50,6 @@ pub enum SignalMessage {
         from: Option<String>,
         payload: SignalPayload,
     },
-    // Host → Server commands
-    Kick {
-        peer_id: String,
-    },
-    ForceMute {
-        peer_id: String,
-    },
-    LockRoom {
-        password: Option<String>,
-    },
     MuteState {
         muted: bool,
     },
@@ -80,20 +78,18 @@ pub enum SignalMessage {
     PeerLeft {
         peer_id: String,
     },
-    Kicked,
-    ForceMuted,
-    RoomLocked {
-        locked: bool,
-    },
-    RoomLockedError,
     RoomNotFound,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum SignalPayload {
-    Offer { sdp: String },
-    Answer { sdp: String },
+    Offer {
+        sdp: String,
+    },
+    Answer {
+        sdp: String,
+    },
     IceCandidate {
         candidate: String,
         sdp_mid: Option<String>,
@@ -141,24 +137,10 @@ pub const EVENT_STATE_CHANGED: &str = "state-changed";
 pub const EVENT_PEER_JOINED: &str = "peer-joined";
 pub const EVENT_PEER_LEFT: &str = "peer-left";
 pub const EVENT_ERROR: &str = "error";
-pub const EVENT_KICKED: &str = "kicked";
-pub const EVENT_FORCE_MUTED: &str = "force-muted";
-pub const EVENT_ROOM_LOCKED: &str = "room-locked";
 pub const EVENT_PING_UPDATE: &str = "ping-update";
 pub const EVENT_VOICE_ACTIVITY: &str = "voice-activity";
 pub const EVENT_PEER_MUTE_CHANGED: &str = "peer-mute-changed";
 pub const EVENT_MIC_TEST_LEVEL: &str = "mic-test-level";
-pub const EVENT_CHAT_MESSAGE: &str = "chat-message";
-pub const EVENT_SHORTCUT_MUTE_TOGGLED: &str = "shortcut-mute-toggled";
-pub const EVENT_PTT_STATE_CHANGED: &str = "ptt-state-changed";
-
-// ── Shortcut configuration ──
-
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct ShortcutConfig {
-    pub toggle_mute: Option<String>,
-    pub push_to_talk: Option<String>,
-}
 
 // ── Audio device info (for mic selector) ──
 
@@ -184,28 +166,17 @@ pub struct PeerMuteEvent {
     pub muted: bool,
 }
 
-// ── Chat message event (emitted to frontend) ──
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ChatMessageEvent {
-    pub id: String,
-    pub peer_id: String,
-    pub sender_name: String,
-    pub content: String,
-    pub timestamp: u64,
-    pub is_self: bool,
-}
-
 // ── Encoded audio frame (mic → network) ──
 
 #[derive(Debug, Clone)]
 pub struct EncodedFrame {
-    pub data: Vec<u8>,
+    pub data: Bytes,
 }
 
 // ── Decoded audio frame (network → speaker) ──
 
 #[derive(Debug, Clone)]
 pub struct DecodedFrame {
-    pub samples: Vec<f32>,
+    pub samples: PcmFrame,
+    pub len: usize,
 }

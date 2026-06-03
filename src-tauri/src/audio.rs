@@ -2,6 +2,7 @@ use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
+use bytes::Bytes;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::SampleRate;
 use ringbuf::{
@@ -11,7 +12,10 @@ use ringbuf::{
 
 use tauri::{AppHandle, Emitter};
 
-use crate::types::{AudioDevice, EncodedFrame, FRAME_SIZE, SAMPLE_RATE, EVENT_MIC_TEST_LEVEL};
+use crate::types::{
+    AudioDevice, EncodedFrame, PcmFrame, AUDIO_CAPTURE_QUEUE_FRAMES, AUDIO_PLAYBACK_QUEUE_FRAMES,
+    EVENT_MIC_TEST_LEVEL, FRAME_SIZE, SAMPLE_RATE,
+};
 
 // ── AudioCapture ──
 
@@ -30,19 +34,31 @@ impl AudioCapture {
     ) -> Result<Self> {
         let muted = Arc::new(AtomicBool::new(false));
         let speaking = Arc::new(AtomicBool::new(false));
-        let (encoded_tx, encoded_rx) = flume::unbounded::<EncodedFrame>();
+        let (encoded_tx, encoded_rx) = flume::bounded::<EncodedFrame>(AUDIO_CAPTURE_QUEUE_FRAMES);
         let muted_flag = Arc::clone(&muted);
         let speaking_flag = Arc::clone(&speaking);
 
         std::thread::Builder::new()
             .name("audio-capture".into())
             .spawn(move || {
-                if let Err(e) = run_capture(device_name, muted_flag, speaking_flag, encoded_tx, noise_suppression, vad_threshold, agc_enabled) {
+                if let Err(e) = run_capture(
+                    device_name,
+                    muted_flag,
+                    speaking_flag,
+                    encoded_tx,
+                    noise_suppression,
+                    vad_threshold,
+                    agc_enabled,
+                ) {
                     tracing::error!("Audio capture thread error: {e}");
                 }
             })?;
 
-        Ok(Self { muted, speaking, encoded_rx })
+        Ok(Self {
+            muted,
+            speaking,
+            encoded_rx,
+        })
     }
 
     pub fn set_muted(&self, muted: bool) {
@@ -51,6 +67,106 @@ impl AudioCapture {
 
     pub fn is_speaking(&self) -> bool {
         self.speaking.load(Ordering::Relaxed)
+    }
+}
+
+fn mono_sample_at(input: &[f32], channels: usize, frame_idx: usize) -> f32 {
+    let start = frame_idx * channels;
+    if channels == 1 {
+        input[start]
+    } else {
+        input[start..start + channels].iter().copied().sum::<f32>() / channels as f32
+    }
+}
+
+fn convert_input_to_mono_48k(
+    input: &[f32],
+    input_rate: u32,
+    input_channels: u16,
+    output: &mut [f32],
+) {
+    output.fill(0.0);
+
+    let channels = usize::from(input_channels.max(1));
+    let input_frames = input.len() / channels;
+    if input_frames == 0 {
+        return;
+    }
+
+    if input_rate == SAMPLE_RATE {
+        let frames = input_frames.min(output.len());
+        if channels == 1 {
+            output[..frames].copy_from_slice(&input[..frames]);
+        } else {
+            for (frame_idx, out_sample) in output.iter_mut().take(frames).enumerate() {
+                *out_sample = mono_sample_at(input, channels, frame_idx);
+            }
+        }
+        return;
+    }
+
+    let ratio = SAMPLE_RATE as f64 / input_rate as f64;
+    for (i, out_sample) in output.iter_mut().enumerate() {
+        let src_pos = i as f64 / ratio;
+        let idx = src_pos as usize;
+        if idx >= input_frames {
+            break;
+        }
+
+        let frac = src_pos - idx as f64;
+        let s0 = mono_sample_at(input, channels, idx);
+        let s1 = if idx + 1 < input_frames {
+            mono_sample_at(input, channels, idx + 1)
+        } else {
+            s0
+        };
+        *out_sample = (s0 as f64 * (1.0 - frac) + s1 as f64 * frac) as f32;
+    }
+}
+
+fn convert_mono_48k_to_output(
+    input: &[f32],
+    output_rate: u32,
+    output_channels: u16,
+    output: &mut Vec<f32>,
+) {
+    output.clear();
+
+    let channels = usize::from(output_channels.max(1));
+    let output_frames = if output_rate == SAMPLE_RATE {
+        input.len()
+    } else {
+        (input.len() as f64 * output_rate as f64 / SAMPLE_RATE as f64) as usize
+    };
+
+    output.resize(output_frames * channels, 0.0);
+    if input.is_empty() {
+        return;
+    }
+
+    if output_rate == SAMPLE_RATE {
+        if channels == 1 {
+            output[..input.len()].copy_from_slice(input);
+        } else {
+            for (frame_idx, &sample) in input.iter().enumerate() {
+                let start = frame_idx * channels;
+                output[start..start + channels].fill(sample);
+            }
+        }
+        return;
+    }
+
+    let ratio = output_rate as f64 / SAMPLE_RATE as f64;
+    for frame_idx in 0..output_frames {
+        let src_pos = frame_idx as f64 / ratio;
+        let idx = src_pos as usize;
+        let frac = src_pos - idx as f64;
+        let s0 = *input.get(idx).unwrap_or(&0.0);
+        let s1 = *input.get(idx + 1).unwrap_or(&s0);
+        let sample = (s0 as f64 * (1.0 - frac) + s1 as f64 * frac) as f32;
+
+        let start = frame_idx * channels;
+        output[start..start + channels].fill(sample);
     }
 }
 
@@ -71,7 +187,8 @@ fn run_capture(
             .with_context(|| format!("Input device '{}' not found, falling back to default", name))
             .or_else(|e| {
                 tracing::warn!("{e}");
-                host.default_input_device().context("No input audio device found")
+                host.default_input_device()
+                    .context("No input audio device found")
             })?
     } else {
         host.default_input_device()
@@ -135,18 +252,15 @@ fn run_capture(
     // Noise suppression (RNNoise) — works on 480-sample frames in i16 range
     const DENOISE_FRAME: usize = nnnoiseless::FRAME_SIZE; // 480
     let mut denoise = nnnoiseless::DenoiseState::new();
-    let mut denoise_in = vec![0.0f32; DENOISE_FRAME];
-    let mut denoise_out = vec![0.0f32; DENOISE_FRAME];
+    let mut denoise_in = [0.0f32; DENOISE_FRAME];
+    let mut denoise_out = [0.0f32; DENOISE_FRAME];
 
     // We need to read device frames, convert to mono 48kHz, then encode in 20ms chunks.
     // Device frame size in samples (interleaved): 20ms worth at device rate * channels
     let device_frame_samples = (device_rate as usize / 50) * device_channels as usize;
     let mut device_buf = vec![0.0f32; device_frame_samples];
-    let mut mono_48k_buf = vec![0.0f32; FRAME_SIZE]; // 960 samples = 20ms @ 48kHz
-    let mut opus_buf = vec![0u8; 4000];
-
-    let need_resample = device_rate != SAMPLE_RATE;
-    let need_downmix = device_channels > 1;
+    let mut mono_48k_buf: PcmFrame = [0.0; FRAME_SIZE]; // 960 samples = 20ms @ 48kHz
+    let mut opus_buf = [0u8; 4000];
 
     // AGC state
     let mut agc_gain: f32 = 1.0;
@@ -162,36 +276,10 @@ fn run_capture(
 
         consumer.pop_slice(&mut device_buf);
 
-        // Step 1: Downmix to mono if needed
-        let mono: Vec<f32> = if need_downmix {
-            device_buf
-                .chunks(device_channels as usize)
-                .map(|frame| frame.iter().sum::<f32>() / device_channels as f32)
-                .collect()
-        } else {
-            device_buf.clone()
-        };
+        // Step 1: Convert device input to mono 48kHz without per-frame allocation.
+        convert_input_to_mono_48k(&device_buf, device_rate, device_channels, &mut mono_48k_buf);
 
-        // Step 2: Resample to 48kHz if needed (linear interpolation)
-        if need_resample {
-            let ratio = SAMPLE_RATE as f64 / device_rate as f64;
-            for i in 0..FRAME_SIZE {
-                let src_pos = i as f64 / ratio;
-                let idx = src_pos as usize;
-                let frac = src_pos - idx as f64;
-                let s0 = *mono.get(idx).unwrap_or(&0.0);
-                let s1 = *mono.get(idx + 1).unwrap_or(&s0);
-                mono_48k_buf[i] = (s0 as f64 * (1.0 - frac) + s1 as f64 * frac) as f32;
-            }
-        } else {
-            let len = mono.len().min(FRAME_SIZE);
-            mono_48k_buf[..len].copy_from_slice(&mono[..len]);
-            for s in &mut mono_48k_buf[len..] {
-                *s = 0.0;
-            }
-        }
-
-        // Step 3: Noise suppression (two 480-sample frames per 960-sample Opus frame)
+        // Step 2: Noise suppression (two 480-sample frames per 960-sample Opus frame)
         if noise_suppression.load(Ordering::Relaxed) {
             for chunk_idx in 0..2 {
                 let offset = chunk_idx * DENOISE_FRAME;
@@ -207,12 +295,16 @@ fn run_capture(
             }
         }
 
-        // Step 4: Automatic Gain Control (after noise suppression, before VAD)
+        // Step 3: Automatic Gain Control (after noise suppression, before VAD)
         if agc_enabled.load(Ordering::Relaxed) {
             let rms = (mono_48k_buf.iter().map(|s| s * s).sum::<f32>() / FRAME_SIZE as f32).sqrt();
             if rms > 1e-6 {
                 let desired = (target_rms / rms).clamp(0.25, 31.6);
-                let coeff = if desired < agc_gain { attack_coeff } else { release_coeff };
+                let coeff = if desired < agc_gain {
+                    attack_coeff
+                } else {
+                    release_coeff
+                };
                 agc_gain += coeff * (desired - agc_gain);
             }
             for s in mono_48k_buf.iter_mut() {
@@ -220,19 +312,20 @@ fn run_capture(
             }
         }
 
-        // Step 5: Voice activity detection (after AGC)
+        // Step 4: Voice activity detection (after AGC)
         let peak = mono_48k_buf.iter().map(|s| s.abs()).fold(0.0f32, f32::max);
         let threshold = f32::from_bits(vad_threshold.load(Ordering::Relaxed));
         speaking.store(peak > threshold, Ordering::Relaxed);
 
-        // Step 6: Opus encode
+        // Step 5: Opus encode
         match encoder.encode_float(&mono_48k_buf, &mut opus_buf) {
             Ok(len) => {
                 let frame = EncodedFrame {
-                    data: opus_buf[..len].to_vec(),
+                    data: Bytes::copy_from_slice(&opus_buf[..len]),
                 };
-                if encoded_tx.send(frame).is_err() {
-                    break;
+                match encoded_tx.try_send(frame) {
+                    Ok(()) | Err(flume::TrySendError::Full(_)) => {}
+                    Err(flume::TrySendError::Disconnected(_)) => break,
                 }
             }
             Err(e) => {
@@ -248,9 +341,7 @@ fn run_capture(
 
 pub fn list_input_devices() -> Vec<AudioDevice> {
     let host = cpal::default_host();
-    let default_name = host
-        .default_input_device()
-        .and_then(|d| d.name().ok());
+    let default_name = host.default_input_device().and_then(|d| d.name().ok());
 
     let devices = match host.input_devices() {
         Ok(devs) => devs,
@@ -271,9 +362,7 @@ pub fn list_input_devices() -> Vec<AudioDevice> {
 
 pub fn list_output_devices() -> Vec<AudioDevice> {
     let host = cpal::default_host();
-    let default_name = host
-        .default_output_device()
-        .and_then(|d| d.name().ok());
+    let default_name = host.default_output_device().and_then(|d| d.name().ok());
 
     let devices = match host.output_devices() {
         Ok(devs) => devs,
@@ -295,12 +384,12 @@ pub fn list_output_devices() -> Vec<AudioDevice> {
 // ── AudioPlayback ──
 
 pub struct AudioPlayback {
-    tx: flume::Sender<Vec<f32>>,
+    tx: flume::Sender<PcmFrame>,
 }
 
 impl AudioPlayback {
     pub fn new(device_name: Option<String>) -> Result<Self> {
-        let (tx, rx) = flume::unbounded::<Vec<f32>>();
+        let (tx, rx) = flume::bounded::<PcmFrame>(AUDIO_PLAYBACK_QUEUE_FRAMES);
 
         std::thread::Builder::new()
             .name("audio-playback".into())
@@ -313,8 +402,8 @@ impl AudioPlayback {
         Ok(Self { tx })
     }
 
-    pub fn write(&self, samples: &[f32]) {
-        let _ = self.tx.send(samples.to_vec());
+    pub fn write(&self, samples: PcmFrame) {
+        let _ = self.tx.try_send(samples);
     }
 }
 
@@ -325,14 +414,25 @@ pub struct MicTest {
 }
 
 impl MicTest {
-    pub fn new(device_name: Option<String>, output_device_name: Option<String>, app: AppHandle, noise_suppression: Arc<AtomicBool>) -> Result<Self> {
+    pub fn new(
+        device_name: Option<String>,
+        output_device_name: Option<String>,
+        app: AppHandle,
+        noise_suppression: Arc<AtomicBool>,
+    ) -> Result<Self> {
         let stop = Arc::new(AtomicBool::new(false));
         let stop_flag = Arc::clone(&stop);
 
         std::thread::Builder::new()
             .name("mic-test".into())
             .spawn(move || {
-                if let Err(e) = run_mic_test(device_name, output_device_name, stop_flag, app, noise_suppression) {
+                if let Err(e) = run_mic_test(
+                    device_name,
+                    output_device_name,
+                    stop_flag,
+                    app,
+                    noise_suppression,
+                ) {
                     tracing::error!("Mic test error: {e}");
                 }
             })?;
@@ -351,7 +451,13 @@ impl Drop for MicTest {
     }
 }
 
-fn run_mic_test(device_name: Option<String>, output_device_name: Option<String>, stop: Arc<AtomicBool>, app: AppHandle, noise_suppression: Arc<AtomicBool>) -> Result<()> {
+fn run_mic_test(
+    device_name: Option<String>,
+    output_device_name: Option<String>,
+    stop: Arc<AtomicBool>,
+    app: AppHandle,
+    noise_suppression: Arc<AtomicBool>,
+) -> Result<()> {
     let host = cpal::default_host();
 
     // ── Input device ──
@@ -447,19 +553,17 @@ fn run_mic_test(device_name: Option<String>, output_device_name: Option<String>,
     // Noise suppression
     const DENOISE_FRAME: usize = nnnoiseless::FRAME_SIZE;
     let mut denoise = nnnoiseless::DenoiseState::new();
-    let mut denoise_in = vec![0.0f32; DENOISE_FRAME];
-    let mut denoise_out = vec![0.0f32; DENOISE_FRAME];
-
-    let need_resample_in = in_rate != SAMPLE_RATE;
-    let need_downmix = in_channels > 1;
-    let need_resample_out = out_rate != SAMPLE_RATE;
-    let need_upmix = out_channels > 1;
+    let mut denoise_in = [0.0f32; DENOISE_FRAME];
+    let mut denoise_out = [0.0f32; DENOISE_FRAME];
 
     let device_frame_samples = (in_rate as usize / 50) * in_channels as usize;
     let mut device_buf = vec![0.0f32; device_frame_samples];
-    let mut mono_48k = vec![0.0f32; FRAME_SIZE];
-    let mut opus_buf = vec![0u8; 4000];
-    let mut decoded_buf = vec![0.0f32; FRAME_SIZE];
+    let mut mono_48k: PcmFrame = [0.0; FRAME_SIZE];
+    let mut opus_buf = [0u8; 4000];
+    let mut decoded_buf: PcmFrame = [0.0; FRAME_SIZE];
+    let output_capacity = ((FRAME_SIZE as f64 * out_rate as f64 / SAMPLE_RATE as f64) as usize + 1)
+        * usize::from(out_channels.max(1));
+    let mut output_buf = Vec::with_capacity(output_capacity);
     let mut level_counter: u32 = 0;
 
     while !stop.load(Ordering::Relaxed) {
@@ -470,34 +574,7 @@ fn run_mic_test(device_name: Option<String>, output_device_name: Option<String>,
 
         consumer.pop_slice(&mut device_buf);
 
-        // Downmix to mono
-        let mono: Vec<f32> = if need_downmix {
-            device_buf
-                .chunks(in_channels as usize)
-                .map(|frame| frame.iter().sum::<f32>() / in_channels as f32)
-                .collect()
-        } else {
-            device_buf.clone()
-        };
-
-        // Resample to 48kHz
-        if need_resample_in {
-            let ratio = SAMPLE_RATE as f64 / in_rate as f64;
-            for i in 0..FRAME_SIZE {
-                let src_pos = i as f64 / ratio;
-                let idx = src_pos as usize;
-                let frac = src_pos - idx as f64;
-                let s0 = *mono.get(idx).unwrap_or(&0.0);
-                let s1 = *mono.get(idx + 1).unwrap_or(&s0);
-                mono_48k[i] = (s0 as f64 * (1.0 - frac) + s1 as f64 * frac) as f32;
-            }
-        } else {
-            let len = mono.len().min(FRAME_SIZE);
-            mono_48k[..len].copy_from_slice(&mono[..len]);
-            for s in &mut mono_48k[len..] {
-                *s = 0.0;
-            }
-        }
+        convert_input_to_mono_48k(&device_buf, in_rate, in_channels, &mut mono_48k);
 
         // Noise suppression (conditional)
         if noise_suppression.load(Ordering::Relaxed) {
@@ -517,7 +594,11 @@ fn run_mic_test(device_name: Option<String>, output_device_name: Option<String>,
         level_counter += 1;
         if level_counter >= 3 {
             level_counter = 0;
-            let peak = mono_48k.iter().map(|s| s.abs()).fold(0.0f32, f32::max).clamp(0.0, 1.0);
+            let peak = mono_48k
+                .iter()
+                .map(|s| s.abs())
+                .fold(0.0f32, f32::max)
+                .clamp(0.0, 1.0);
             let _ = app.emit(EVENT_MIC_TEST_LEVEL, peak);
         }
 
@@ -528,43 +609,21 @@ fn run_mic_test(device_name: Option<String>, output_device_name: Option<String>,
         };
 
         // Opus decode
-        let decoded_samples = match decoder.decode_float(&opus_buf[..encoded_len], &mut decoded_buf, false) {
-            Ok(n) => n,
-            Err(_) => continue,
-        };
+        let decoded_samples =
+            match decoder.decode_float(&opus_buf[..encoded_len], &mut decoded_buf, false) {
+                Ok(n) => n,
+                Err(_) => continue,
+            };
 
-        let pcm = &decoded_buf[..decoded_samples];
-
-        // Resample from 48kHz to output rate
-        let resampled: Vec<f32> = if need_resample_out {
-            let ratio = out_rate as f64 / SAMPLE_RATE as f64;
-            let out_len = (pcm.len() as f64 * ratio) as usize;
-            (0..out_len)
-                .map(|i| {
-                    let src_pos = i as f64 / ratio;
-                    let idx = src_pos as usize;
-                    let frac = src_pos - idx as f64;
-                    let s0 = *pcm.get(idx).unwrap_or(&0.0);
-                    let s1 = *pcm.get(idx + 1).unwrap_or(&s0);
-                    (s0 as f64 * (1.0 - frac) + s1 as f64 * frac) as f32
-                })
-                .collect()
-        } else {
-            pcm.to_vec()
-        };
-
-        // Upmix to output channels
-        let output: Vec<f32> = if need_upmix {
-            resampled
-                .iter()
-                .flat_map(|&s| std::iter::repeat_n(s, out_channels as usize))
-                .collect()
-        } else {
-            resampled
-        };
+        convert_mono_48k_to_output(
+            &decoded_buf[..decoded_samples],
+            out_rate,
+            out_channels,
+            &mut output_buf,
+        );
 
         if let Ok(mut p) = out_producer.lock() {
-            let _ = p.push_slice(&output);
+            let _ = p.push_slice(&output_buf);
         }
     }
 
@@ -572,16 +631,22 @@ fn run_mic_test(device_name: Option<String>, output_device_name: Option<String>,
     Ok(())
 }
 
-fn run_playback(rx: flume::Receiver<Vec<f32>>, device_name: Option<String>) -> Result<()> {
+fn run_playback(rx: flume::Receiver<PcmFrame>, device_name: Option<String>) -> Result<()> {
     let host = cpal::default_host();
     let device = if let Some(ref name) = device_name {
         host.output_devices()
             .context("Failed to enumerate output devices")?
             .find(|d| d.name().ok().as_deref() == Some(name))
-            .with_context(|| format!("Output device '{}' not found, falling back to default", name))
+            .with_context(|| {
+                format!(
+                    "Output device '{}' not found, falling back to default",
+                    name
+                )
+            })
             .or_else(|e| {
                 tracing::warn!("{e}");
-                host.default_output_device().context("No output audio device found")
+                host.default_output_device()
+                    .context("No output audio device found")
             })?
     } else {
         host.default_output_device()
@@ -608,9 +673,6 @@ fn run_playback(rx: flume::Receiver<Vec<f32>>, device_name: Option<String>) -> R
         buffer_size: cpal::BufferSize::Default,
     };
 
-    let need_resample = device_rate != SAMPLE_RATE;
-    let need_upmix = device_channels > 1;
-
     // Ring buffer sized for the device rate and channels
     let ring_size = (device_rate as usize / 5) * device_channels as usize;
     let ring = HeapRb::<f32>::new(ring_size);
@@ -632,40 +694,65 @@ fn run_playback(rx: flume::Receiver<Vec<f32>>, device_name: Option<String>) -> R
     stream.play()?;
 
     // Read decoded 48kHz mono, resample/upmix to device format, push to ring buffer
-    let producer_clone = Arc::clone(&producer);
+    let output_capacity = ((FRAME_SIZE as f64 * device_rate as f64 / SAMPLE_RATE as f64) as usize
+        + 1)
+        * usize::from(device_channels.max(1));
+    let mut output_buf = Vec::with_capacity(output_capacity);
     while let Ok(samples) = rx.recv() {
-        // Resample from 48kHz to device rate if needed
-        let resampled: Vec<f32> = if need_resample {
-            let ratio = device_rate as f64 / SAMPLE_RATE as f64;
-            let out_len = (samples.len() as f64 * ratio) as usize;
-            (0..out_len)
-                .map(|i| {
-                    let src_pos = i as f64 / ratio;
-                    let idx = src_pos as usize;
-                    let frac = src_pos - idx as f64;
-                    let s0 = *samples.get(idx).unwrap_or(&0.0);
-                    let s1 = *samples.get(idx + 1).unwrap_or(&s0);
-                    (s0 as f64 * (1.0 - frac) + s1 as f64 * frac) as f32
-                })
-                .collect()
-        } else {
-            samples
-        };
+        convert_mono_48k_to_output(&samples, device_rate, device_channels, &mut output_buf);
 
-        // Upmix mono to device channels if needed
-        let output: Vec<f32> = if need_upmix {
-            resampled
-                .iter()
-                .flat_map(|&s| std::iter::repeat_n(s, device_channels as usize))
-                .collect()
-        } else {
-            resampled
-        };
-
-        if let Ok(mut p) = producer_clone.lock() {
-            let _ = p.push_slice(&output);
+        if let Ok(mut p) = producer.lock() {
+            let _ = p.push_slice(&output_buf);
         }
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn input_conversion_downmixes_interleaved_stereo_without_changing_rate() {
+        let mut out = [1.0; FRAME_SIZE];
+        let input = [0.2, 0.6, -0.5, 0.5];
+
+        convert_input_to_mono_48k(&input, SAMPLE_RATE, 2, &mut out);
+
+        assert!((out[0] - 0.4).abs() < f32::EPSILON);
+        assert!(out[1].abs() < f32::EPSILON);
+        assert!(out[2..].iter().all(|&sample| sample == 0.0));
+    }
+
+    #[test]
+    fn input_conversion_resamples_and_pads_when_source_is_short() {
+        let mut out = [0.0; 4];
+        let input = [0.0, 1.0];
+
+        convert_input_to_mono_48k(&input, 24_000, 1, &mut out);
+
+        assert_eq!(out, [0.0, 0.5, 1.0, 1.0]);
+    }
+
+    #[test]
+    fn output_conversion_upmixes_mono_to_interleaved_channels() {
+        let mut out = Vec::new();
+
+        convert_mono_48k_to_output(&[0.25, -0.5], SAMPLE_RATE, 2, &mut out);
+
+        assert_eq!(out, vec![0.25, 0.25, -0.5, -0.5]);
+    }
+
+    #[test]
+    fn output_conversion_reuses_existing_allocation() {
+        let mut out = Vec::with_capacity(16);
+        let capacity = out.capacity();
+
+        convert_mono_48k_to_output(&[0.0; 4], SAMPLE_RATE, 1, &mut out);
+        convert_mono_48k_to_output(&[1.0; 4], SAMPLE_RATE, 1, &mut out);
+
+        assert_eq!(out, vec![1.0; 4]);
+        assert_eq!(out.capacity(), capacity);
+    }
 }

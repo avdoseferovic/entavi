@@ -1,115 +1,104 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Copy, Check } from 'lucide-vue-next'
+import { ref, computed, watch, onUnmounted } from 'vue'
+import { Lock, MicOff } from 'lucide-vue-next'
 import { useAppState } from '../composables/useAppState'
-import ParticipantItem from './ParticipantItem.vue'
 import RoomControls from './RoomControls.vue'
-import PingIndicator from './PingIndicator.vue'
-import ChatPanel from './ChatPanel.vue'
 
-const { state, peerCountLabel, getDisplayName } = useAppState()
-
-const copyFeedback = ref<'idle' | 'ok' | 'fail'>('idle')
+const { state, getInitials, getDisplayName } = useAppState()
 
 defineEmits<{
   'toggle-mute': []
   leave: []
 }>()
 
-async function copyRoomCode() {
-  if (!state.roomCode) return
-  try {
-    await navigator.clipboard.writeText(state.roomCode)
-    copyFeedback.value = 'ok'
-  } catch (err) {
-    console.warn('Clipboard write failed:', err)
-    copyFeedback.value = 'fail'
-  }
-  setTimeout(() => { copyFeedback.value = 'idle' }, 1500)
-}
+const elapsed = ref(0)
+let timer: ReturnType<typeof setInterval> | null = null
+
+const connected = computed(() => state.peerList.size > 0)
+const totalTiles = computed(() => state.peerList.size + 1)
+const gridCols = computed(() => {
+  const n = totalTiles.value
+  if (n <= 1) return 1
+  if (n <= 4) return 2
+  return 3
+})
+
+const timeLabel = computed(() => {
+  const mm = String(Math.floor(elapsed.value / 60)).padStart(2, '0')
+  const ss = String(elapsed.value % 60).padStart(2, '0')
+  return `${mm}:${ss}`
+})
+
+watch(
+  connected,
+  (isUp) => {
+    if (isUp && !timer) {
+      elapsed.value = 0
+      timer = setInterval(() => { elapsed.value += 1 }, 1000)
+    } else if (!isUp && timer) {
+      clearInterval(timer)
+      timer = null
+    }
+  },
+  { immediate: true },
+)
+
+onUnmounted(() => { if (timer) clearInterval(timer) })
 </script>
 
 <template>
-  <div class="view">
-    <div class="room-header">
-      <h2 class="room-name">{{ state.roomName }}</h2>
-      <span class="room-header-right">
-        <PingIndicator />
-        <span class="room-peer-count">{{ peerCountLabel }}</span>
-      </span>
-    </div>
-    <div class="room-subtitle">
-      <code>{{ state.roomCode }}</code>
-      <button
-        type="button"
-        class="copy-btn"
-        title="Copy room code to clipboard"
-        aria-label="Copy room code to clipboard"
-        @click="copyRoomCode"
-      >
-        <Check v-if="copyFeedback === 'ok'" :size="14" />
-        <Copy v-else :size="14" />
-        {{ copyFeedback === 'ok' ? 'Copied!' : copyFeedback === 'fail' ? 'Failed' : 'Copy' }}
-      </button>
-    </div>
-    <div class="room-divider"></div>
+  <div class="stage">
+    <div class="scrim" />
 
-    <div class="room-tabs">
-      <button
-        class="room-tab"
-        :class="{ active: state.activeRoomTab === 'people' }"
-        @click="state.activeRoomTab = 'people'"
-      >
-        People
-      </button>
-      <button
-        class="room-tab"
-        :class="{ active: state.activeRoomTab === 'chat' }"
-        @click="state.activeRoomTab = 'chat'; state.chatUnread = 0"
-      >
-        Chat
-        <span v-if="state.chatUnread > 0" class="chat-unread-dot"></span>
-      </button>
+    <!-- Encrypted + timer pill -->
+    <div class="enc-pill">
+      <span class="lk"><Lock :size="14" /></span>
+      Encrypted <span class="timer">· {{ connected ? timeLabel : '00:00' }} ·</span>
+      <span class="muted-dim">not recorded</span>
     </div>
 
-    <div v-if="state.activeRoomTab === 'people'" class="participant-list">
-      <ParticipantItem
-        :name="getDisplayName()"
-        :is-self="true"
-        :is-host-entry="state.isHost"
-        :is-speaking="state.selfSpeaking && !state.isMuted"
-        :is-muted-peer="state.isMuted"
-      />
-      <ParticipantItem
+    <!-- Reconnecting status -->
+    <div class="room-status-pill room-status-pill--reconnecting" :class="{ visible: state.isReconnecting }">
+      <span class="reconnecting-pulse" /> Reconnecting… (attempt {{ state.reconnectAttempt }})
+    </div>
+
+    <!-- Connecting (no peer yet) -->
+    <div v-if="!connected" class="calling">
+      <div class="calling-av">
+        <span class="pulse-ring" /><span class="pulse-ring d2" /><span class="pulse-ring d3" />
+        <div class="av" style="width: 120px; height: 120px; font-size: 40px">{{ getInitials(getDisplayName()) }}</div>
+      </div>
+      <div class="calling-name">{{ state.isJoining ? 'Connecting…' : 'Waiting for your guest' }}</div>
+      <div class="calling-status"><Lock :size="14" color="var(--teal-300)" /> Connecting securely — only you two can hear this.</div>
+    </div>
+
+    <!-- In-call video grid -->
+    <div v-else class="vgrid" :class="`cols-${gridCols}`">
+      <div
         v-for="[peerId, name] in state.peerList"
         :key="peerId"
-        :name="name || peerId.substring(0, 8)"
-        :is-self="false"
-        :is-host-entry="peerId === state.hostPeerId"
-        :is-speaking="state.speakingPeers.has(peerId)"
-        :is-muted-peer="state.mutedPeers.has(peerId)"
-        :peer-id="peerId"
-      />
+        class="vtile"
+        :class="{ speaking: state.speakingPeers.has(peerId) && !state.mutedPeers.has(peerId) }"
+      >
+        <div class="av" style="width: 116px; height: 116px; font-size: 38px">{{ getInitials(name || peerId.slice(0, 2)) }}</div>
+        <div class="tname">
+          {{ name || peerId.slice(0, 8) }} <span class="sub">· this call only</span>
+          <MicOff v-if="state.mutedPeers.has(peerId)" :size="13" />
+        </div>
+      </div>
+
+      <div class="vtile you" :class="{ speaking: state.selfSpeaking && !state.isMuted }">
+        <div class="av" style="width: 108px; height: 108px; font-size: 34px">{{ getInitials(getDisplayName()) }}</div>
+        <div class="tname">
+          You
+          <MicOff v-if="state.isMuted" :size="13" />
+        </div>
+      </div>
     </div>
 
-    <ChatPanel v-if="state.activeRoomTab === 'chat'" />
-
-    <div
-      class="room-status-pill room-status-pill--reconnecting"
-      :class="{ visible: state.isReconnecting }"
-    >
-      <span class="reconnecting-pulse" />
-      Reconnecting… (attempt {{ state.reconnectAttempt }})
-    </div>
-
-    <div
-      class="room-status-pill room-status-pill--muted"
-      :class="{ visible: state.noticeBannerVisible }"
-    >
-      You were muted by the host
-    </div>
-
+    <!-- Control bar: mute + end -->
     <RoomControls
+      :muted="state.isMuted"
       @toggle-mute="$emit('toggle-mute')"
       @leave="$emit('leave')"
     />

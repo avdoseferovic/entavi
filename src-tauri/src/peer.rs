@@ -2,13 +2,9 @@ use std::sync::atomic::{AtomicU16, AtomicU32, Ordering};
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use bytes::Bytes;
-use tokio::sync::Mutex as TokioMutex;
 use webrtc::api::interceptor_registry::register_default_interceptors;
 use webrtc::api::media_engine::{MediaEngine, MIME_TYPE_OPUS};
 use webrtc::api::APIBuilder;
-use webrtc::data_channel::data_channel_message::DataChannelMessage;
-use webrtc::data_channel::RTCDataChannel;
 use webrtc::ice_transport::ice_server::RTCIceServer;
 use webrtc::interceptor::registry::Registry;
 use webrtc::peer_connection::configuration::RTCConfiguration;
@@ -20,15 +16,16 @@ use webrtc::rtp_transceiver::rtp_codec::RTCRtpCodecCapability;
 use webrtc::track::track_local::track_local_static_rtp::TrackLocalStaticRTP;
 use webrtc::track::track_local::{TrackLocal, TrackLocalWriter};
 
-use crate::types::{DecodedFrame, EncodedFrame, SignalPayload, TurnServerInfo, CHANNELS, FRAME_SIZE, SAMPLE_RATE};
+use crate::types::{
+    DecodedFrame, EncodedFrame, PcmFrame, SignalPayload, TurnServerInfo, AUDIO_DECODE_QUEUE_FRAMES,
+    CHANNELS, FRAME_SIZE, SAMPLE_RATE,
+};
 
 pub struct PeerConn {
     pub peer_id: String,
     pub connection: Arc<RTCPeerConnection>,
     pub audio_track: Arc<TrackLocalStaticRTP>,
     pub decoded_rx: flume::Receiver<DecodedFrame>,
-    data_channel: Arc<TokioMutex<Option<Arc<RTCDataChannel>>>>,
-    chat_tx: flume::Sender<(String, String)>,
     rtp_seq: AtomicU16,
     rtp_ts: AtomicU32,
     rtp_ssrc: u32,
@@ -38,7 +35,6 @@ impl PeerConn {
     pub async fn new(
         peer_id: String,
         on_ice_candidate: flume::Sender<(String, SignalPayload)>,
-        chat_tx: flume::Sender<(String, String)>,
         turn_servers: &[TurnServerInfo],
         conn_state_tx: flume::Sender<(String, RTCPeerConnectionState)>,
     ) -> Result<Self> {
@@ -99,7 +95,7 @@ impl PeerConn {
             .await?;
 
         // Channel for decoded audio from this remote peer
-        let (decoded_tx, decoded_rx) = flume::unbounded::<DecodedFrame>();
+        let (decoded_tx, decoded_rx) = flume::bounded::<DecodedFrame>(AUDIO_DECODE_QUEUE_FRAMES);
 
         // ICE candidate callback
         let pid = peer_id.clone();
@@ -121,7 +117,9 @@ impl PeerConn {
                         sdp_mid: json.sdp_mid,
                         sdp_mline_index: json.sdp_mline_index,
                     };
-                    let _ = ice_tx.send((pid, payload));
+                    if let Err(e) = ice_tx.send_async((pid, payload)).await {
+                        tracing::warn!("Failed to queue ICE candidate for engine: {e}");
+                    }
                 }
             })
         }));
@@ -131,14 +129,17 @@ impl PeerConn {
         let conn_state_tx_clone = conn_state_tx.clone();
         connection.on_peer_connection_state_change(Box::new(move |state| {
             tracing::info!("Peer {pid_log} connection state: {state}");
-            let _ = conn_state_tx_clone.send((pid_log.clone(), state));
+            let tx = conn_state_tx_clone.clone();
+            let peer_id = pid_log.clone();
             if state == RTCPeerConnectionState::Failed
                 || state == RTCPeerConnectionState::Disconnected
                 || state == RTCPeerConnectionState::Closed
             {
                 tracing::warn!("Peer {pid_log} connection lost");
             }
-            Box::pin(async {})
+            Box::pin(async move {
+                let _ = tx.send_async((peer_id, state)).await;
+            })
         }));
 
         // On incoming track: decode opus → send decoded PCM to engine
@@ -160,7 +161,7 @@ impl PeerConn {
                         }
                     };
 
-                    let mut pcm_buf = vec![0.0f32; FRAME_SIZE];
+                    let mut pcm_buf: PcmFrame = [0.0; FRAME_SIZE];
 
                     loop {
                         match track.read_rtp().await {
@@ -172,11 +173,16 @@ impl PeerConn {
 
                                 match decoder.decode_float(payload, &mut pcm_buf, false) {
                                     Ok(samples) => {
+                                        let len = samples.min(FRAME_SIZE);
                                         let frame = DecodedFrame {
-                                            samples: pcm_buf[..samples].to_vec(),
+                                            samples: pcm_buf,
+                                            len,
                                         };
-                                        if decoded_tx.send(frame).is_err() {
-                                            break; // engine dropped
+                                        match decoded_tx.try_send(frame) {
+                                            Ok(()) | Err(flume::TrySendError::Full(_)) => {}
+                                            Err(flume::TrySendError::Disconnected(_)) => {
+                                                break; // engine dropped
+                                            }
                                         }
                                     }
                                     Err(e) => {
@@ -194,30 +200,6 @@ impl PeerConn {
             })
         }));
 
-        // Data channel storage (set by offerer via setup_data_channel, or by answerer via on_data_channel)
-        let data_channel: Arc<TokioMutex<Option<Arc<RTCDataChannel>>>> =
-            Arc::new(TokioMutex::new(None));
-
-        // Answerer side: receive data channel created by the offerer
-        {
-            let dc_store = Arc::clone(&data_channel);
-            let chat_tx_dc = chat_tx.clone();
-            let pid_dc = peer_id.clone();
-            connection.on_data_channel(Box::new(move |channel: Arc<RTCDataChannel>| {
-                let dc_store = Arc::clone(&dc_store);
-                let chat_tx_dc = chat_tx_dc.clone();
-                let pid_dc = pid_dc.clone();
-                Box::pin(async move {
-                    tracing::info!("Received data channel '{}' from {pid_dc}", channel.label());
-                    {
-                        let mut guard = dc_store.lock().await;
-                        *guard = Some(Arc::clone(&channel));
-                    }
-                    Self::setup_dc_on_message(channel, chat_tx_dc, pid_dc);
-                })
-            }));
-        }
-
         let rtp_ssrc: u32 = rand::random();
 
         Ok(Self {
@@ -225,8 +207,6 @@ impl PeerConn {
             connection,
             audio_track,
             decoded_rx,
-            data_channel,
-            chat_tx,
             rtp_seq: AtomicU16::new(0),
             rtp_ts: AtomicU32::new(0),
             rtp_ssrc,
@@ -236,9 +216,7 @@ impl PeerConn {
     /// Create an SDP offer (we are the caller)
     pub async fn create_offer(&self) -> Result<String> {
         let offer = self.connection.create_offer(None).await?;
-        self.connection
-            .set_local_description(offer.clone())
-            .await?;
+        self.connection.set_local_description(offer.clone()).await?;
         Ok(offer.sdp)
     }
 
@@ -292,51 +270,6 @@ impl PeerConn {
         Ok(())
     }
 
-    /// Offerer side: create a data channel before createOffer
-    pub async fn setup_data_channel(&self) -> Result<()> {
-        let channel = self
-            .connection
-            .create_data_channel("chat", None)
-            .await
-            .context("Failed to create data channel")?;
-
-        {
-            let mut guard = self.data_channel.lock().await;
-            *guard = Some(Arc::clone(&channel));
-        }
-
-        Self::setup_dc_on_message(channel, self.chat_tx.clone(), self.peer_id.clone());
-        Ok(())
-    }
-
-    /// Send a text message on the data channel (if open)
-    pub async fn send_chat_message(&self, text: &str) -> Result<()> {
-        let guard = self.data_channel.lock().await;
-        if let Some(dc) = guard.as_ref() {
-            dc.send_text(text.to_string()).await.context("Failed to send chat message")?;
-        }
-        Ok(())
-    }
-
-    /// Shared helper: wire on_message to forward received text into chat_tx
-    fn setup_dc_on_message(
-        channel: Arc<RTCDataChannel>,
-        chat_tx: flume::Sender<(String, String)>,
-        peer_id: String,
-    ) {
-        channel.on_message(Box::new(move |msg: DataChannelMessage| {
-            let chat_tx = chat_tx.clone();
-            let peer_id = peer_id.clone();
-            Box::pin(async move {
-                let text = match String::from_utf8(msg.data.to_vec()) {
-                    Ok(t) => t,
-                    Err(_) => return,
-                };
-                let _ = chat_tx.send((peer_id, text));
-            })
-        }));
-    }
-
     /// Send encoded opus audio as an RTP packet
     pub async fn send_audio(&self, frame: &EncodedFrame) -> Result<()> {
         use webrtc::rtp::header::Header;
@@ -355,7 +288,7 @@ impl PeerConn {
                 marker: false,
                 ..Default::default()
             },
-            payload: Bytes::copy_from_slice(&frame.data),
+            payload: frame.data.clone(),
         };
         self.audio_track
             .write_rtp(&packet)
@@ -365,9 +298,6 @@ impl PeerConn {
     }
 
     pub async fn close(&self) {
-        if let Some(dc) = self.data_channel.lock().await.take() {
-            let _ = dc.close().await;
-        }
         let _ = self.connection.close().await;
     }
 }

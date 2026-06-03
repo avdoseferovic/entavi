@@ -5,43 +5,16 @@ import { useAppState } from '../composables/useAppState'
 import { useTauri } from '../composables/useTauri'
 import MicSelector from './MicSelector.vue'
 import SpeakerSelector from './SpeakerSelector.vue'
-import ShortcutSettings from './ShortcutSettings.vue'
-import HostControls from './HostControls.vue'
 
 const { state } = useAppState()
 const tauri = useTauri()
 
 const emit = defineEmits<{ close: [] }>()
 
-function onSignalingUrlChange() {
-  const url = state.signalingUrl.trim()
-  if (url) {
-    localStorage.setItem('entavi:signalingUrl', url)
-    tauri.setSignalingUrl(url)
-  } else {
-    localStorage.removeItem('entavi:signalingUrl')
-    tauri.setSignalingUrl(null)
-  }
-}
-
 function toggleNoiseSuppression() {
   state.noiseSuppression = !state.noiseSuppression
   localStorage.setItem('entavi:noiseSuppression', String(state.noiseSuppression))
   tauri.setNoiseSuppression(state.noiseSuppression)
-}
-
-function onVoiceSensitivityChange(e: Event) {
-  const value = parseInt((e.target as HTMLInputElement).value)
-  state.voiceSensitivity = value
-  localStorage.setItem('entavi:voiceSensitivity', String(value))
-  const threshold = Math.pow(10, -4 + 3 * value / 100)
-  tauri.setVadThreshold(threshold)
-}
-
-function toggleAgc() {
-  state.agcEnabled = !state.agcEnabled
-  localStorage.setItem('entavi:agc', String(state.agcEnabled))
-  tauri.setAgc(state.agcEnabled)
 }
 
 function onOverlayClick(e: MouseEvent) {
@@ -76,25 +49,9 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
           </button>
         </div>
         <div class="settings-modal-body">
-
-          <p class="settings-section-eyebrow">01 / Audio</p>
+          <p class="settings-section-eyebrow">Audio</p>
           <MicSelector />
           <SpeakerSelector />
-          <div class="setting-group">
-            <label class="setting-label" for="voice-sensitivity">Voice sensitivity</label>
-            <div class="range-row">
-              <span class="range-label-left">More</span>
-              <input
-                id="voice-sensitivity"
-                type="range" min="0" max="100"
-                :value="state.voiceSensitivity"
-                @input="onVoiceSensitivityChange"
-              />
-              <span class="range-label-right">Less</span>
-            </div>
-          </div>
-
-          <p class="settings-section-eyebrow">02 / Processing</p>
           <div class="setting-group">
             <button
               type="button"
@@ -109,41 +66,6 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
               <span class="toggle-label">Noise suppression</span>
             </button>
           </div>
-          <div class="setting-group">
-            <button
-              type="button"
-              class="noise-toggle"
-              role="switch"
-              :aria-checked="state.agcEnabled"
-              @click="toggleAgc"
-            >
-              <span class="toggle-track" :class="{ on: state.agcEnabled }">
-                <span class="toggle-thumb" />
-              </span>
-              <span class="toggle-label">Auto gain control</span>
-            </button>
-          </div>
-
-          <p class="settings-section-eyebrow">03 / Shortcuts</p>
-          <ShortcutSettings />
-
-          <template v-if="state.isHost && state.currentView === 'room'">
-            <p class="settings-section-eyebrow">04 / Host Controls</p>
-            <HostControls />
-          </template>
-
-          <p class="settings-section-eyebrow">05 / Advanced</p>
-          <div class="setting-group">
-            <label class="setting-label" for="signaling-url">Signaling server</label>
-            <input
-              id="signaling-url"
-              v-model="state.signalingUrl"
-              type="text"
-              placeholder="Default (entavi-signaling.avdo.workers.dev)"
-              @change="onSignalingUrlChange"
-            />
-          </div>
-
         </div>
       </div>
     </div>

@@ -3,24 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Entavi — Free, Private, P2P Voice Chat</title>
-  <meta name="description" content="Entavi is a peer-to-peer encrypted voice chat app. Create a room, share the code, and talk — no accounts, no servers routing your audio.">
+  <title>Entavi — Untraceable, end-to-end encrypted calls</title>
+  <meta name="description" content="Entavi is end-to-end encrypted voice & video with no phone number, no account, and no contact list. Share your QR call code, take the call, and nothing is saved.">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Entavi — Scan to call me. Nothing left behind.">
+  <meta property="og:description" content="End-to-end encrypted calls with no number, no account, and no trace. Share your code, take the call, and nothing is saved.">
+  <meta property="og:url" content="https://entavi.app">
+  <meta name="twitter:card" content="summary_large_image">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300..700&family=Geist+Mono:wght@300..500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&family=Spline+Sans+Mono:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="styles.css">
 
-  <!-- Structured data -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Entavi",
     "applicationCategory": "CommunicationApplication",
-    "operatingSystem": "macOS, Windows, Linux",
+    "operatingSystem": "macOS, Windows, Linux, Web",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-    "description": "Free, private, peer-to-peer encrypted voice chat. No accounts required.",
+    "description": "Untraceable, end-to-end encrypted voice & video calls. No phone number, no account, no contact list — share a QR code and nothing is saved.",
     "url": "https://entavi.app"
   }
   </script>
@@ -29,476 +34,291 @@
     "@context": "https://schema.org",
     "@type": "FAQPage",
     "mainEntity": [
-      {
-        "@type": "Question",
-        "name": "Do I need to create an account?",
-        "acceptedAnswer": { "@type": "Answer", "text": "No. Entavi requires no accounts, no registration, and no personal information. Just open the app, create or join a room, and talk." }
-      },
-      {
-        "@type": "Question",
-        "name": "Is it really peer-to-peer?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Yes. Audio flows directly between participants over WebRTC. The signaling server only helps peers find each other — it never touches your audio." }
-      },
-      {
-        "@type": "Question",
-        "name": "What platforms are supported?",
-        "acceptedAnswer": { "@type": "Answer", "text": "macOS (Apple Silicon), Windows (64-bit), and Linux (.deb and AppImage). Also available as a web app at web.entavi.app." }
-      },
-      {
-        "@type": "Question",
-        "name": "How many people can be in a room?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Rooms work best with small groups. Since audio is peer-to-peer, each participant connects directly to every other participant." }
-      },
-      {
-        "@type": "Question",
-        "name": "Is it encrypted?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Yes. All audio and chat messages are encrypted using DTLS-SRTP, the standard encryption built into WebRTC." }
-      },
-      {
-        "@type": "Question",
-        "name": "Is it free and open source?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Yes, completely free and open source." }
-      }
+      { "@type": "Question", "name": "How do people reach me without a number?", "acceptedAnswer": { "@type": "Answer", "text": "You share your Entavi QR code — show it in person, send the link, or let someone scan it. Scanning places the call. There's no number or username to look up." } },
+      { "@type": "Question", "name": "What does “nothing is saved” actually mean?", "acceptedAnswer": { "@type": "Answer", "text": "Entavi keeps no call logs, no contact lists, and no metadata about who you called or when. Your session name and code live only on your device and disappear when you close the app." } },
+      { "@type": "Question", "name": "Is it really end-to-end encrypted?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Audio and video are encrypted on your device and decrypted only on the other person's. The encryption keys never leave your device, so no one in between — including us — can listen." } },
+      { "@type": "Question", "name": "Can someone reuse my code to call me later?", "acceptedAnswer": { "@type": "Answer", "text": "Only if you let them. You can rotate your code at any time or set it to burn after a single call. Once rotated, the old code stops working immediately." } },
+      { "@type": "Question", "name": "How do I know it's really the right person?", "acceptedAnswer": { "@type": "Answer", "text": "Each call has a safety number you can compare with the other person. If the numbers match, the line is verified and free of impersonation." } }
     ]
   }
-  </script>
-
-  <!-- Scroll reveal: IntersectionObserver (no @starting-style — limited browser support) -->
-  <script>
-    (function() {
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        document.addEventListener('DOMContentLoaded', function() {
-          document.querySelectorAll('section').forEach(function(s) { s.classList.add('revealed'); });
-        });
-        return;
-      }
-      var io = new IntersectionObserver(function(entries) {
-        entries.forEach(function(e) {
-          if (e.isIntersecting) { e.target.classList.add('revealed'); io.unobserve(e.target); }
-        });
-      }, { threshold: 0.07 });
-      document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('section').forEach(function(s) { io.observe(s); });
-      });
-    })();
-  </script>
-
-  <!-- Clipboard for code copy buttons -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      document.querySelectorAll('[data-copy]').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          var text = btn.dataset.copy;
-          if (!navigator.clipboard) { btn.textContent = 'N/A'; return; }
-          navigator.clipboard.writeText(text).then(function() {
-            btn.textContent = 'Copied!';
-            btn.classList.add('copied');
-            setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
-          }).catch(function() {
-            btn.textContent = 'Failed';
-            setTimeout(function() { btn.textContent = 'Copy'; }, 1500);
-          });
-        });
-      });
-    });
   </script>
 </head>
 <body>
 
-  <!-- Navigation -->
-  <nav>
-    <div class="nav-inner">
-      <a href="#" class="nav-wordmark">Entavi</a>
-      <ul class="nav-links" id="navLinks">
-        <li><a href="#features">Features</a></li>
-        <li><a href="#how-it-works">How it Works</a></li>
-        <li><a href="#security">Security</a></li>
-        <li><a href="#self-host">Self-Host</a></li>
-        <li><a href="#faq">FAQ</a></li>
-        <li>
-          <a href="https://github.com/avdoseferovic/entavi" class="nav-github" target="_blank" rel="noopener">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-            GitHub
-          </a>
-        </li>
-        <li><a href="https://github.com/avdoseferovic/entavi/releases/download/v0.2.0/Entavi_0.2.0_aarch64.dmg" class="nav-cta">Download</a></li>
-      </ul>
-      <button class="mobile-menu-btn" onclick="const l=document.getElementById('navLinks');const o=l.classList.toggle('open');this.setAttribute('aria-expanded',o)" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks">
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
+  <!-- Nav -->
+  <nav class="nav">
+    <div class="wrap row">
+      <a class="brand" href="#top">
+        <img src="favicon.svg" width="30" height="30" alt="Entavi">
+        <span class="wm">Entavi</span>
+      </a>
+      <div class="links">
+        <a href="#how">How it works</a>
+        <a href="#privacy">Privacy</a>
+        <a href="#why">Why Entavi</a>
+        <a href="#faq">FAQ</a>
+      </div>
+      <div class="spacer"></div>
+      <div class="navcta">
+        <a class="signin" href="https://web.entavi.app">Sign in</a>
+        <a class="btn btn-primary" href="https://web.entavi.app"><i data-lucide="qr-code"></i> Get your code</a>
+      </div>
     </div>
   </nav>
 
-  <main>
-
   <!-- Hero -->
-  <section class="hero">
-    <div class="hero-content">
-      <div class="hero-badge"><strong>v0.2.0</strong> — Fresh look, expanded audio controls</div>
-      <h1 class="hero-h1">Voice calls that don't go through anyone.</h1>
-      <p class="hero-sub">
-        Entavi is peer-to-peer. Audio flows directly between you and your friends —
-        no accounts, no servers in the middle, no one listening.
-      </p>
-      <div class="hero-cta-group">
-        <a href="https://github.com/avdoseferovic/entavi/releases/download/v0.2.0/Entavi_0.2.0_aarch64.dmg" class="btn btn-primary">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-          Download for macOS
-        </a>
-        <p class="hero-note">
-          <a href="https://github.com/avdoseferovic/entavi/releases/download/v0.2.0/Entavi_0.2.0_x64-setup.exe">Windows</a>
-          &middot;
-          <a href="https://github.com/avdoseferovic/entavi/releases/download/v0.2.0/Entavi_0.2.0_amd64.deb">Linux</a>
-          &middot;
-          <a href="https://github.com/avdoseferovic/entavi/releases/download/v0.2.0/Entavi_0.2.0_amd64.AppImage">AppImage</a>
-          &middot;
-          <a href="https://web.entavi.app">Try in browser</a>
-        </p>
+  <header class="hero" id="top">
+    <div class="wrap grid">
+      <div>
+        <span class="eyebrow"><i data-lucide="shield-check"></i> Untraceable calls</span>
+        <h1>Scan to call me.<br><span class="accent">Nothing</span> left behind.</h1>
+        <p class="sub">Entavi is end-to-end encrypted voice &amp; video with no phone number, no account, and no contact list. Share your code, take the call, and nothing is saved.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary btn-lg" href="https://web.entavi.app"><i data-lucide="qr-code"></i> Get your call code</a>
+          <a class="btn btn-ghost btn-lg" href="#how"><i data-lucide="play"></i> See how it works</a>
+        </div>
+        <div class="reassure">
+          <span class="item"><i data-lucide="check"></i> No sign-up</span>
+          <span class="item"><i data-lucide="check"></i> No phone number</span>
+          <span class="item"><i data-lucide="check"></i> No history</span>
+        </div>
       </div>
 
-      <!-- App preview — HTML div tree, .preview-* namespace -->
-      <div class="preview-window" aria-hidden="true">
-        <div class="preview-titlebar">
-          <div style="display:flex;gap:6px;align-items:center">
-            <span class="preview-dot preview-dot-red"></span>
-            <span class="preview-dot preview-dot-yellow"></span>
-            <span class="preview-dot preview-dot-green"></span>
-          </div>
-          <span class="preview-titlebar-label">entavi</span>
+      <div class="qrhero">
+        <div class="float f1">
+          <div class="ic" style="background: var(--teal-50); color: var(--teal-600)"><i data-lucide="lock"></i></div>
+          <div><div class="t">End-to-end</div><div class="d">encrypted on this device</div></div>
         </div>
-        <div class="preview-body">
-          <span class="preview-room-name">Friday Calls</span>
-          <span class="preview-room-code">ax7-q9k &middot; 3 people</span>
-          <div class="preview-divider"></div>
-          <div class="preview-participants">
-            <div class="preview-peer">
-              <span class="preview-peer-avatar preview-peer-avatar--indigo">AX</span>
-              <span>Alex</span>
-              <span class="preview-peer-level"></span>
-            </div>
-            <div class="preview-peer">
-              <span class="preview-peer-avatar preview-peer-avatar--green">MA</span>
-              <span>Maria</span>
-            </div>
-            <div class="preview-peer">
-              <span class="preview-peer-avatar preview-peer-avatar--amber">YO</span>
-              <span>You</span>
-              <span class="preview-peer-self">(You)</span>
-              <span class="preview-peer-level preview-peer-level--delayed"></span>
-            </div>
+        <div class="card">
+          <div class="tag">My call code</div>
+          <h3>Scan to call me</h3>
+          <div class="qrbox">
+            <div id="heroQR"></div>
+            <img class="mk" src="favicon.svg" alt="">
           </div>
-          <div class="preview-dock">
-            <div class="preview-dock-btn-sm">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-            </div>
-            <div class="preview-dock-mute">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
-              Mute
-            </div>
-            <div class="preview-dock-btn-sm">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
-            </div>
-          </div>
+          <div class="codeline"><i data-lucide="link"></i> entavi.app/c/yjxq-pk2f</div>
+        </div>
+        <div class="float f2">
+          <div class="ic" style="background: var(--success-bg); color: var(--success)"><i data-lucide="eye-off"></i></div>
+          <div><div class="t">No trail</div><div class="d">nothing is saved</div></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- How it works -->
+  <section class="sec tint" id="how">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow"><i data-lucide="route"></i> Three steps</span>
+        <h2>A call code instead of a contact list</h2>
+        <p>No directory to mine, no number to leak. Reaching someone is as simple as scanning — and just as forgettable.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="num">1</div>
+          <div class="ic"><i data-lucide="qr-code"></i></div>
+          <h3>Get your code</h3>
+          <p>Open Entavi and a private QR call code is yours instantly. No email, no number, no account to create.</p>
+        </div>
+        <div class="step">
+          <div class="num">2</div>
+          <div class="ic"><i data-lucide="scan-line"></i></div>
+          <h3>Share or scan</h3>
+          <p>Show your code, drop the link, or scan someone else's. That's the whole address book — one code, used once.</p>
+        </div>
+        <div class="step">
+          <div class="num">3</div>
+          <div class="ic"><i data-lucide="phone"></i></div>
+          <h3>Talk, then it's gone</h3>
+          <p>Crystal-clear encrypted voice &amp; video. When the call ends, the code can rotate and nothing is left behind.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- 01 / Features -->
-  <section id="features">
-    <div class="section-inner">
-      <p class="section-eyebrow">01 / Features</p>
-      <h2 class="section-heading">Everything you need,<br>nothing you don't.</h2>
-      <p class="section-sub">Built for simplicity and privacy. No bloat, no tracking, no accounts.</p>
+  <!-- Privacy pillars -->
+  <section class="sec" id="privacy">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow"><i data-lucide="shield"></i> Private by design</span>
+        <h2>Privacy isn't a setting. It's the architecture.</h2>
+        <p>Entavi can't leak what it never collects. Every part of the product is built to leave no trace.</p>
+      </div>
+      <div class="pillars">
+        <div class="pillar"><div class="ic"><i data-lucide="eye-off"></i></div><h3>No record of the call</h3><p>No call logs, no metadata trail, no "who called whom." When a call ends, there's nothing left to hand over.</p></div>
+        <div class="pillar"><div class="ic"><i data-lucide="user-x"></i></div><h3>No account, ever</h3><p>No phone number, email, or profile. Your identity is a code you create and discard — not a thing we store.</p></div>
+        <div class="pillar"><div class="ic"><i data-lucide="lock"></i></div><h3>End-to-end encrypted</h3><p>Audio and video are encrypted on your device. Keys never leave it, so no one in the middle can listen in.</p></div>
+        <div class="pillar"><div class="ic"><i data-lucide="refresh-cw"></i></div><h3>Rotating codes</h3><p>Burn a code after a single call or rotate it whenever you like. Old codes simply stop working.</p></div>
+        <div class="pillar"><div class="ic"><i data-lucide="shield-check"></i></div><h3>Verify it's really them</h3><p>Compare a per-call safety number to be certain you're talking to the right person — no impersonation.</p></div>
+        <div class="pillar"><div class="ic"><i data-lucide="scan"></i></div><h3>Capture-aware</h3><p>Optionally blur the call if a screen recording is detected, so private conversations stay private.</p></div>
+      </div>
+    </div>
+  </section>
 
-      <div class="features-grid">
-        <!-- Hero feature: P2P audio -->
-        <div class="feature-hero">
-          <div class="feature-hero-text">
-            <h3>Audio flows directly between you.</h3>
-            <p>Entavi uses WebRTC to route audio peer-to-peer — no media relay, no middleman server ever touches your voice. Once peers are connected, the call continues even if the signaling server goes offline.</p>
-          </div>
-          <div class="feature-hero-diagram" role="img" aria-label="Architecture diagram showing two devices connected directly via WebRTC P2P, with a signaling server only used for initial connection">
-            <div class="feature-hero-node">
-              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
-              <span>Device A</span>
-            </div>
-            <div class="feature-hero-arrow">
-              <svg width="60" height="8" viewBox="0 0 60 8" fill="none" aria-hidden="true"><path d="M0 4h56m0 0l-4-3m4 3l-4 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-              <span style="color:var(--success);font-size:9px">DTLS-SRTP encrypted</span>
-              <svg width="60" height="8" viewBox="0 0 60 8" fill="none" style="transform:scaleX(-1)" aria-hidden="true"><path d="M0 4h56m0 0l-4-3m4 3l-4 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-            </div>
-            <div class="feature-hero-node">
-              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
-              <span>Device B</span>
-            </div>
-          </div>
+  <!-- Comparison -->
+  <section class="sec tint" id="why">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow"><i data-lucide="git-compare"></i> The difference</span>
+        <h2>Ordinary calls remember everything</h2>
+        <p>Entavi was built to forget. Here's what that changes.</p>
+      </div>
+      <div class="compare">
+        <div class="ccol ord">
+          <div class="cap"><i data-lucide="phone"></i> An ordinary call</div>
+          <ul>
+            <li><i data-lucide="x"></i> Tied to your phone number</li>
+            <li><i data-lucide="x"></i> Stored call history &amp; logs</li>
+            <li><i data-lucide="x"></i> Contacts uploaded to a server</li>
+            <li><i data-lucide="x"></i> Metadata: who, when, how long</li>
+            <li><i data-lucide="x"></i> Accounts that outlive the call</li>
+          </ul>
         </div>
-
-        <!-- 4 secondary features -->
-        <div class="feature-card">
-          <h3>Noise suppression</h3>
-          <p>RNNoise processes your mic in real-time. Keyboards, fans, and background noise get filtered out before your voice leaves the device.</p>
-        </div>
-        <div class="feature-card">
-          <h3>Host controls</h3>
-          <p>Kick peers, force-mute, and password-protect rooms. Full control over who's in and what they can do.</p>
-        </div>
-        <div class="feature-card">
-          <h3>Encrypted chat</h3>
-          <p>Text messages travel over the same encrypted WebRTC data channel as audio. The signaling server never sees message content.</p>
-        </div>
-        <div class="feature-card">
-          <h3>Web app + cross-platform</h3>
-          <p>Download the native app for macOS, Windows, or Linux — or use <a href="https://web.entavi.app">web.entavi.app</a> directly in your browser. No install needed.</p>
+        <div class="ccol ent">
+          <div class="cap"><img src="favicon.svg" width="18" height="18" alt=""> With Entavi</div>
+          <ul>
+            <li><i data-lucide="check"></i> A code you create and discard</li>
+            <li><i data-lucide="check"></i> Nothing saved when it ends</li>
+            <li><i data-lucide="check"></i> No contact list to upload</li>
+            <li><i data-lucide="check"></i> No metadata trail to collect</li>
+            <li><i data-lucide="check"></i> Identity that disappears with you</li>
+          </ul>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- 02 / How it works -->
-  <section id="how-it-works">
-    <div class="section-inner">
-      <p class="section-eyebrow">02 / How it works</p>
-      <h2 class="section-heading">Three steps. That's it.</h2>
-      <p class="section-sub">No sign-ups, no configuration. Getting started takes seconds.</p>
-
-      <div class="timeline">
-        <div class="timeline-item">
-          <span class="timeline-node">01</span>
-          <h3>Create a room</h3>
-          <p>Open Entavi and hit "Start a room." You get a unique 6-character code instantly. Name it whatever you like.</p>
-        </div>
-        <div class="timeline-item">
-          <span class="timeline-node">02</span>
-          <h3>Share the code</h3>
-          <p>Send the room code to whoever you want to talk to — text it, post it, whatever. They enter it in the app or web version.</p>
-        </div>
-        <div class="timeline-item">
-          <span class="timeline-node">03</span>
-          <h3>Talk directly</h3>
-          <p>Once they join, audio flows directly between you. Encrypted, peer-to-peer, with no server in between. The signaling server could go offline and your call would continue uninterrupted.</p>
-        </div>
-      </div>
-
-      <div class="arch-note">
-        <strong>Signaling server</strong> (Cloudflare Workers) — only helps peers find each other during setup. It never handles audio data and can be self-hosted. See the self-host guide below.
-      </div>
+  <!-- Philosophy -->
+  <section class="philo">
+    <div class="scrim"></div>
+    <div class="wrap inner">
+      <span class="glyph"><svg width="64" height="55" viewBox="8 9 35 30" fill="#5BD3C6" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="18.5" width="3" height="11" rx="1.5"/><rect x="16" y="14.5" width="3" height="19" rx="1.5"/><rect x="22" y="10.5" width="3" height="27" rx="1.5"/><rect x="28" y="14.5" width="3" height="19" rx="1.5"/><circle cx="34" cy="24" r="2.3" fill-opacity="0.85"/><circle cx="39" cy="24" r="1.5" fill-opacity="0.45"/></svg></span>
+      <blockquote>Your voice should belong to you — and to <span class="accent">no one else</span>. Not a server, not a log, not a record waiting to be found.</blockquote>
+      <div class="by">The idea behind Entavi</div>
     </div>
   </section>
 
-  <!-- 03 / Security -->
-  <section id="security">
-    <div class="section-inner">
-      <p class="section-eyebrow">03 / Security</p>
-      <h2 class="section-heading">Private by design.</h2>
-      <p class="section-sub">Your voice never passes through our servers. We couldn't listen even if we wanted to.</p>
-
-      <div class="security-content">
-        <ul class="security-list">
-          <li>
-            <div class="security-check">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-            </div>
-            <span>Audio and chat encrypted with <strong>DTLS-SRTP</strong> — standard WebRTC encryption protocol</span>
-          </li>
-          <li>
-            <div class="security-check">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-            </div>
-            <span><strong>No central server</strong> ever routes or stores your audio data</span>
-          </li>
-          <li>
-            <div class="security-check">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-            </div>
-            <span><strong>No accounts</strong> — zero personal information collected or required</span>
-          </li>
-          <li>
-            <div class="security-check">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-            </div>
-            <span><strong>No telemetry</strong> — the app doesn't phone home or track usage</span>
-          </li>
-          <li>
-            <div class="security-check">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-            </div>
-            <span><strong>Open source</strong> — the full codebase is public on GitHub for audit</span>
-          </li>
-        </ul>
-
-        <div class="security-aside">
-          <blockquote class="security-pullquote">
-            "There is no Entavi server holding your audio. The audio never leaves the path between your devices."
-          </blockquote>
-          <div class="tech-stack">
-            <h3>Built with</h3>
-            <div class="tech-tags">
-              <span class="tech-tag">Tauri 2.0</span>
-              <span class="tech-tag">Rust</span>
-              <span class="tech-tag">WebRTC</span>
-              <span class="tech-tag">Opus</span>
-              <span class="tech-tag">RNNoise</span>
-              <span class="tech-tag">TypeScript</span>
-              <span class="tech-tag">Vue 3</span>
-              <span class="tech-tag">Cloudflare Workers</span>
-            </div>
-          </div>
+  <!-- FAQ -->
+  <section class="sec" id="faq">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow"><i data-lucide="help-circle"></i> Questions</span>
+        <h2>Good questions, plainly answered</h2>
+      </div>
+      <div class="faq">
+        <div class="qa open">
+          <button type="button" aria-expanded="true"><span class="q">How do people reach me without a number?</span><span class="chev"><i data-lucide="chevron-down"></i></span></button>
+          <div class="a"><p>You share your Entavi QR code — show it in person, send the link, or let someone scan it. Scanning places the call. There's no number or username to look up.</p></div>
+        </div>
+        <div class="qa">
+          <button type="button" aria-expanded="false"><span class="q">What does "nothing is saved" actually mean?</span><span class="chev"><i data-lucide="chevron-down"></i></span></button>
+          <div class="a"><p>Entavi keeps no call logs, no contact lists, and no metadata about who you called or when. Your session name and code live only on your device and disappear when you close the app.</p></div>
+        </div>
+        <div class="qa">
+          <button type="button" aria-expanded="false"><span class="q">Is it really end-to-end encrypted?</span><span class="chev"><i data-lucide="chevron-down"></i></span></button>
+          <div class="a"><p>Yes. Audio and video are encrypted on your device and decrypted only on the other person's. The encryption keys never leave your device, so no one in between — including us — can listen.</p></div>
+        </div>
+        <div class="qa">
+          <button type="button" aria-expanded="false"><span class="q">Can someone reuse my code to call me later?</span><span class="chev"><i data-lucide="chevron-down"></i></span></button>
+          <div class="a"><p>Only if you let them. You can rotate your code at any time or set it to burn after a single call. Once rotated, the old code stops working immediately.</p></div>
+        </div>
+        <div class="qa">
+          <button type="button" aria-expanded="false"><span class="q">How do I know it's really the right person?</span><span class="chev"><i data-lucide="chevron-down"></i></span></button>
+          <div class="a"><p>Each call has a safety number you can compare with the other person. If the numbers match, the line is verified and free of impersonation.</p></div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- 04 / Self-host -->
-  <section id="self-host">
-    <div class="section-inner">
-      <p class="section-eyebrow">04 / Self-Host</p>
-      <h2 class="section-heading">Deploy your own signaling server.</h2>
-      <p class="section-sub">Run the signaling relay on your own Cloudflare account. The free tier is all you need.</p>
-
-      <div class="deploy-steps">
-        <div class="deploy-step">
-          <span class="deploy-step-num">01</span>
-          <div class="deploy-step-content">
-            <h3>Prerequisites</h3>
-            <p>You'll need a <a href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noopener">Cloudflare account</a> (free tier works), Node.js, and npm installed.</p>
-          </div>
-        </div>
-        <div class="deploy-step">
-          <span class="deploy-step-num">02</span>
-          <div class="deploy-step-content">
-            <h3>Clone and install</h3>
-            <div class="code-block">
-              <code>git clone https://github.com/avdoseferovic/entavi.git
-cd entavi/signaling-server &amp;&amp; npm install</code>
-              <button class="code-copy-btn" data-copy="git clone https://github.com/avdoseferovic/entavi.git&#10;cd entavi/signaling-server && npm install">Copy</button>
-            </div>
-          </div>
-        </div>
-        <div class="deploy-step">
-          <span class="deploy-step-num">03</span>
-          <div class="deploy-step-content">
-            <h3>Configure</h3>
-            <p>Edit <code class="inline-code">wrangler.toml</code> and set the <code class="inline-code">name</code> field to your preferred worker name.</p>
-          </div>
-        </div>
-        <div class="deploy-step">
-          <span class="deploy-step-num">04</span>
-          <div class="deploy-step-content">
-            <h3>Deploy</h3>
-            <div class="code-block">
-              <code>npx wrangler login
-npm run deploy</code>
-              <button class="code-copy-btn" data-copy="npx wrangler login&#10;npm run deploy">Copy</button>
-            </div>
-          </div>
-        </div>
-        <div class="deploy-step">
-          <span class="deploy-step-num">05</span>
-          <div class="deploy-step-content">
-            <h3>Connect the app</h3>
-            <p>Copy your worker URL (e.g. <code class="inline-code">wss://your-worker.workers.dev/ws</code>), open Entavi, and paste it into the <strong>Signaling server</strong> field under Advanced settings.</p>
-          </div>
+  <!-- Final CTA -->
+  <section class="final">
+    <div class="wrap">
+      <div class="card">
+        <span class="glyphbg"><svg width="300" height="257" viewBox="8 9 35 30" fill="#fff" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="18.5" width="3" height="11" rx="1.5"/><rect x="16" y="14.5" width="3" height="19" rx="1.5"/><rect x="22" y="10.5" width="3" height="27" rx="1.5"/><rect x="28" y="14.5" width="3" height="19" rx="1.5"/><circle cx="34" cy="24" r="2.3" fill-opacity="0.85"/><circle cx="39" cy="24" r="1.5" fill-opacity="0.45"/></svg></span>
+        <h2>Get your call code in seconds</h2>
+        <p>No sign-up, no number, no trace. Just scan and talk.</p>
+        <div class="cta-row">
+          <a class="btn btn-on-dark btn-lg" href="https://web.entavi.app"><i data-lucide="qr-code"></i> Open Entavi</a>
         </div>
       </div>
     </div>
   </section>
-
-  <!-- 05 / FAQ -->
-  <section id="faq">
-    <div class="section-inner">
-      <p class="section-eyebrow">05 / FAQ</p>
-      <h2 class="section-heading">Frequently asked questions.</h2>
-
-      <div class="faq-list">
-        <details class="faq-item">
-          <summary>
-            Do I need to create an account?
-            <svg class="faq-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-          </summary>
-          <div class="faq-answer">No. Entavi requires no accounts, no registration, and no personal information. Just open the app, create or join a room, and talk.</div>
-        </details>
-        <details class="faq-item">
-          <summary>
-            Is it really peer-to-peer?
-            <svg class="faq-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-          </summary>
-          <div class="faq-answer">Yes. Audio flows directly between participants over WebRTC. The signaling server only helps peers find each other — it never touches your audio. Once connected, the server could go offline and your call would continue.</div>
-        </details>
-        <details class="faq-item">
-          <summary>
-            What platforms are supported?
-            <svg class="faq-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-          </summary>
-          <div class="faq-answer">Entavi is available for macOS (Apple Silicon), Windows (64-bit), and Linux (.deb and AppImage). You can also use it directly in your browser at <a href="https://web.entavi.app">web.entavi.app</a> — no download required.</div>
-        </details>
-        <details class="faq-item">
-          <summary>
-            How many people can be in a room?
-            <svg class="faq-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-          </summary>
-          <div class="faq-answer">Rooms work best with small groups. Since audio is peer-to-peer, each participant connects directly to every other participant. Performance depends on your network, but small group conversations work great.</div>
-        </details>
-        <details class="faq-item">
-          <summary>
-            Is it encrypted?
-            <svg class="faq-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-          </summary>
-          <div class="faq-answer">Yes. All audio and chat messages are encrypted using DTLS-SRTP, the standard encryption built into WebRTC. Since data never passes through our servers, no one — not even us — can listen to your conversations or read your messages.</div>
-        </details>
-        <details class="faq-item">
-          <summary>
-            Is it free and open source?
-            <svg class="faq-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-          </summary>
-          <div class="faq-answer">Yes, completely free and open source. You can view the full source code, audit it, and contribute on <a href="https://github.com/avdoseferovic/entavi">GitHub</a>.</div>
-        </details>
-      </div>
-    </div>
-  </section>
-
-  </main>
-
-  <!-- Legal -->
-  <div class="legal">
-    <div class="legal-inner">
-      <h3>Legal Notice</h3>
-      <p>Entavi is provided "as is" without warranty of any kind. While we strive to provide a secure and reliable service, we make no guarantees regarding the availability, accuracy, or security of the application. Use of Entavi is at your own risk. We are not responsible for any damages, data loss, or other liabilities arising from the use of this software.</p>
-    </div>
-  </div>
 
   <!-- Footer -->
-  <footer>
-    <div class="footer-inner">
-      <div class="footer-brand">
-        <span class="footer-wordmark">Entavi</span>
-        <p>Free, private, peer-to-peer encrypted voice chat. No accounts, no servers routing your audio. Open source, built with Rust.</p>
+  <footer class="footer">
+    <div class="wrap">
+      <div class="top">
+        <div>
+          <div class="brand"><img src="favicon.svg" width="28" height="28" alt="Entavi"><span class="wm">Entavi</span></div>
+          <p class="blurb">Your voice. End-to-end encrypted. No accounts, no contacts, no trace.</p>
+        </div>
+        <div class="cols">
+          <div class="col">
+            <h4>Product</h4>
+            <a href="#how">How it works</a>
+            <a href="#privacy">Privacy</a>
+            <a href="#why">Why Entavi</a>
+            <a href="https://web.entavi.app">Open Entavi</a>
+          </div>
+          <div class="col">
+            <h4>Company</h4>
+            <a href="https://github.com/avdoseferovic/entavi" target="_blank" rel="noopener">GitHub</a>
+            <a href="#privacy">Security</a>
+            <a href="https://github.com/avdoseferovic/entavi/issues" target="_blank" rel="noopener">Contact</a>
+          </div>
+          <div class="col">
+            <h4>Legal</h4>
+            <a href="#privacy">Privacy policy</a>
+            <a href="#privacy">Terms</a>
+            <a href="#privacy">Transparency</a>
+          </div>
+        </div>
       </div>
-      <div class="footer-col">
-        <h4>Download</h4>
-        <ul>
-          <li><a href="https://web.entavi.app">Web App</a></li>
-          <li><a href="https://github.com/avdoseferovic/entavi/releases/download/v0.2.0/Entavi_0.2.0_aarch64.dmg">macOS (Apple Silicon)</a></li>
-          <li><a href="https://github.com/avdoseferovic/entavi/releases/download/v0.2.0/Entavi_0.2.0_x64-setup.exe">Windows</a></li>
-          <li><a href="https://github.com/avdoseferovic/entavi/releases/download/v0.2.0/Entavi_0.2.0_amd64.deb">Linux (.deb)</a></li>
-          <li><a href="https://github.com/avdoseferovic/entavi/releases/download/v0.2.0/Entavi_0.2.0_amd64.AppImage">Linux (AppImage)</a></li>
-        </ul>
+      <div class="legal">
+        <span>© 2026 Entavi. All rights reserved.</span>
+        <span class="made"><i data-lucide="lock"></i> Built to forget.</span>
       </div>
-      <div class="footer-col">
-        <h4>Project</h4>
-        <ul>
-          <li><a href="https://github.com/avdoseferovic/entavi" target="_blank" rel="noopener">GitHub</a></li>
-          <li><a href="https://github.com/avdoseferovic/entavi/releases" target="_blank" rel="noopener">Releases</a></li>
-          <li><a href="https://github.com/avdoseferovic/entavi/issues" target="_blank" rel="noopener">Issues</a></li>
-        </ul>
-      </div>
-    </div>
-    <div class="footer-bottom">
-      <span>&copy; 2026 Entavi. Open source software.</span>
-      <a href="https://github.com/avdoseferovic/entavi" target="_blank" rel="noopener">GitHub</a>
     </div>
   </footer>
 
+  <!-- QR (hero) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Icons -->
+  <script src="https://unpkg.com/lucide@0.456.0/dist/umd/lucide.min.js"></script>
+  <script>
+    (function () {
+      // Render Lucide icons
+      if (window.lucide) window.lucide.createIcons();
+
+      // Live hero QR (illustrative placeholder code)
+      var el = document.getElementById('heroQR');
+      if (el && window.QRCode) {
+        new window.QRCode(el, {
+          text: 'https://entavi.app/c/yjxq-pk2f',
+          width: 168, height: 168,
+          colorDark: '#143036', colorLight: '#ffffff',
+          correctLevel: window.QRCode.CorrectLevel.H
+        });
+      }
+
+      // FAQ accordion (single open; first item open by default)
+      document.querySelectorAll('.faq .qa button').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var qa = btn.closest('.qa');
+          var isOpen = qa.classList.contains('open');
+          document.querySelectorAll('.faq .qa').forEach(function (other) {
+            other.classList.remove('open');
+            var b = other.querySelector('button');
+            if (b) b.setAttribute('aria-expanded', 'false');
+          });
+          if (!isOpen) {
+            qa.classList.add('open');
+            btn.setAttribute('aria-expanded', 'true');
+          }
+        });
+      });
+    })();
+  </script>
 </body>
 </html>

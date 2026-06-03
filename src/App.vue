@@ -1,21 +1,27 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import type { UnlistenFn } from '@tauri-apps/api/event'
-import { getVersion } from '@tauri-apps/api/app'
 import { useAppState } from './composables/useAppState'
 import { useTauri } from './composables/useTauri'
 import { setupListeners } from './composables/useTauriEvents'
-import HomeView from './components/HomeView.vue'
-import CreateView from './components/CreateView.vue'
-import JoinView from './components/JoinView.vue'
+import { parseCode } from './lib/callcode'
+import AppBar from './components/AppBar.vue'
+import QrHomeView from './components/QrHomeView.vue'
+import ScanView from './components/ScanView.vue'
 import RoomView from './components/RoomView.vue'
 import SettingsModal from './components/SettingsModal.vue'
 
 const { state, resetRoomState, setStatus, getDisplayName } = useAppState()
 const tauri = useTauri()
-const appVersion = ref('')
+
+const isTauriHost = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 
 let unlisteners: UnlistenFn[] = []
+
+const codeLoading = ref(false)
+const codeError = ref('')
+const endedToast = ref(false)
+let hosting = false
 
 async function toggleMute() {
   state.isMuted = !state.isMuted
@@ -29,156 +35,142 @@ async function toggleMute() {
   await tauri.emitMuteState(state.isMuted)
 }
 
-async function createRoom(roomName: string, password: string | null) {
-  tauri.stopMicTest().catch(() => {})
-  state.isMicTesting = false
-  state.roomName = roomName
-  setStatus('Starting room...', 'connecting')
-  state.currentView = 'room'
-
+/** Host a fresh, live call code: create a room and stay on the QR home until someone connects. */
+async function hostNewCode() {
+  if (hosting) return
+  hosting = true
+  codeError.value = ''
+  codeLoading.value = true
   try {
-    const roomId = await tauri.createRoom(roomName, getDisplayName(), password)
-    state.roomCode = roomId
-    setStatus('Waiting for peers...', 'connected')
-    tauri.showNotification('Room Created', `${roomName} — Code: ${roomId}`)
+    await tauri.leaveRoom().catch(() => {})
+    resetRoomState()
+    state.currentView = 'home'
+    const code = await tauri.createRoom('Entavi call', getDisplayName(), null)
+    state.roomCode = code
+    setStatus('Waiting for a call…', 'connected')
   } catch (err) {
-    setStatus(`${err}`, 'error')
+    codeError.value = `${err}`
+  } finally {
+    codeLoading.value = false
+    hosting = false
   }
 }
 
-async function joinRoom(roomId: string, password: string | null) {
-  tauri.stopMicTest().catch(() => {})
-  state.isMicTesting = false
-  state.roomCode = roomId
-  state.roomName = `Room ${roomId}`
+/** Connect to someone else's code (scanned or pasted). */
+async function connectToCode(raw: string) {
+  const code = parseCode(raw)
+  if (!code) return
+  await tauri.leaveRoom().catch(() => {})
+  resetRoomState()
+  state.roomCode = code
   state.isJoining = true
   state.roomNotFound = false
-
+  state.currentView = 'room'
   try {
-    await tauri.joinRoom(roomId, getDisplayName(), password)
+    await tauri.joinRoom(code, getDisplayName(), null)
   } catch (err) {
     state.isJoining = false
     setStatus(`${err}`, 'error')
+    state.currentView = 'scan'
   }
 }
 
-async function leaveRoom() {
-  try {
-    await tauri.leaveRoom()
-  } catch (err) {
-    console.error('Leave room error:', err)
-  }
-  const roomName = state.roomName
-  state.currentView = 'home'
-  tauri.showNotification('Left Room', roomName || 'Disconnected')
+async function endCall() {
+  await tauri.leaveRoom().catch(() => {})
   resetRoomState()
   tauri.emitMuteState(false)
+  endedToast.value = true
+  setTimeout(() => { endedToast.value = false }, 2600)
+  await hostNewCode()
 }
 
-function onTrayToggleMute() {
-  toggleMute()
-}
+// When someone connects to our live code, drop into the call.
+watch(
+  () => state.peerList.size,
+  (n) => {
+    if (n > 0 && state.currentView === 'home') {
+      state.currentView = 'room'
+      tauri.showNotification('Incoming call', 'Someone used your code — connecting securely')
+    }
+  },
+)
+
+// Always keep a live code ready whenever we land back on home without one.
+watch(
+  () => [state.currentView, state.roomCode] as const,
+  ([view, code]) => {
+    if (view === 'home' && !code && !hosting) hostNewCode()
+  },
+)
 
 onMounted(async () => {
-  appVersion.value = await getVersion()
+  // Tauri-only wiring — skipped when the frontend is opened in a plain browser
+  // (use the web/ app for browser previews; this is the desktop webview frontend).
+  if (isTauriHost) {
+    const savedNoiseSuppression = localStorage.getItem('entavi:noiseSuppression')
+    if (savedNoiseSuppression !== null) {
+      state.noiseSuppression = savedNoiseSuppression !== 'false'
+    }
+    tauri.setNoiseSuppression(state.noiseSuppression)
 
-  // Restore persisted settings from localStorage
-  const savedName = localStorage.getItem('entavi:displayName')
-  if (savedName) state.displayName = savedName
+    const savedOutputDevice = localStorage.getItem('entavi:outputDevice')
+    if (savedOutputDevice) {
+      state.selectedOutput = savedOutputDevice
+      tauri.setOutputDevice(savedOutputDevice)
+    }
 
-  const savedSignalingUrl = localStorage.getItem('entavi:signalingUrl')
-  if (savedSignalingUrl) {
-    state.signalingUrl = savedSignalingUrl
-    tauri.setSignalingUrl(savedSignalingUrl)
+    unlisteners = await setupListeners()
+    window.addEventListener('entavi:tray-toggle-mute', toggleMute)
+    tauri.checkForUpdates()
   }
 
-  const savedNoiseSuppression = localStorage.getItem('entavi:noiseSuppression')
-  if (savedNoiseSuppression !== null) {
-    state.noiseSuppression = savedNoiseSuppression !== 'false'
-  }
-  tauri.setNoiseSuppression(state.noiseSuppression)
-
-  // Restore voice sensitivity
-  const savedVoiceSensitivity = localStorage.getItem('entavi:voiceSensitivity')
-  if (savedVoiceSensitivity !== null) {
-    state.voiceSensitivity = parseInt(savedVoiceSensitivity)
-  }
-  const vadThreshold = Math.pow(10, -4 + 3 * state.voiceSensitivity / 100)
-  tauri.setVadThreshold(vadThreshold)
-
-  // Restore AGC
-  const savedAgc = localStorage.getItem('entavi:agc')
-  if (savedAgc !== null) {
-    state.agcEnabled = savedAgc !== 'false'
-  }
-  tauri.setAgc(state.agcEnabled)
-
-  // Restore output device
-  const savedOutputDevice = localStorage.getItem('entavi:outputDevice')
-  if (savedOutputDevice) {
-    state.selectedOutput = savedOutputDevice
-    tauri.setOutputDevice(savedOutputDevice)
-  }
-
-  // Restore keyboard shortcuts
-  const savedToggleMute = localStorage.getItem('entavi:shortcutToggleMute')
-  if (savedToggleMute) {
-    tauri.setShortcut('toggle_mute', savedToggleMute).catch(() => {
-      localStorage.removeItem('entavi:shortcutToggleMute')
-    })
-  }
-  const savedPushToTalk = localStorage.getItem('entavi:shortcutPushToTalk')
-  if (savedPushToTalk) {
-    tauri.setShortcut('push_to_talk', savedPushToTalk).catch(() => {
-      localStorage.removeItem('entavi:shortcutPushToTalk')
-    })
-  }
-
-  unlisteners = await setupListeners()
-  window.addEventListener('entavi:tray-toggle-mute', onTrayToggleMute)
-
-  // Check for updates (non-blocking, logged on Rust side)
-  tauri.checkForUpdates()
+  // Generate the user's live call code on launch.
+  hostNewCode()
 })
 
 onUnmounted(() => {
   unlisteners.forEach((fn) => fn())
-  window.removeEventListener('entavi:tray-toggle-mute', onTrayToggleMute)
+  window.removeEventListener('entavi:tray-toggle-mute', toggleMute)
 })
 </script>
 
 <template>
-  <div class="container">
-    <header v-if="state.currentView === 'home'">
-      <h1 class="wordmark">Entavi</h1>
-      <p class="wordmark-eyebrow">Peer-to-peer voice</p>
-      <p v-if="appVersion" class="version-pill">v{{ appVersion }}</p>
-    </header>
+  <div class="app-shell">
+    <AppBar
+      v-if="state.currentView !== 'room'"
+      @settings="state.showSettings = true"
+    />
 
-    <HomeView
-      v-if="state.currentView === 'home'"
-      @create="state.currentView = 'create'"
-      @join="state.currentView = 'join'"
-    />
-    <CreateView
-      v-if="state.currentView === 'create'"
-      @back="state.currentView = 'home'"
-      @create="(roomName, password) => createRoom(roomName, password)"
-    />
-    <JoinView
-      v-if="state.currentView === 'join'"
-      @back="state.currentView = 'home'"
-      @join="(roomId, password) => joinRoom(roomId, password)"
-    />
+    <div v-if="state.currentView !== 'room'" class="surface-canvas">
+      <QrHomeView
+        v-if="state.currentView === 'home'"
+        :code="state.roomCode"
+        :loading="codeLoading"
+        :error="codeError"
+        @rotate="hostNewCode"
+        @scan="state.currentView = 'scan'"
+      />
+      <ScanView
+        v-else-if="state.currentView === 'scan'"
+        @connect="connectToCode"
+        @back="state.currentView = 'home'"
+      />
+    </div>
+
     <RoomView
-      v-if="state.currentView === 'room'"
+      v-else
       @toggle-mute="toggleMute"
-      @leave="leaveRoom"
+      @leave="endCall"
     />
 
     <SettingsModal
       v-if="state.showSettings"
       @close="state.showSettings = false"
     />
+
+    <div v-if="endedToast" class="ended">
+      <span class="lk"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+      Call ended · nothing was saved
+    </div>
   </div>
 </template>

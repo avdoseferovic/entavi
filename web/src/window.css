@@ -1,87 +1,9 @@
-/* ── Web-only: desktop window simulation ── */
-
+/* ── Web: full-bleed, identical to the desktop (Tauri) frontend ── */
+html, body, #app {
+  height: 100%;
+  margin: 0;
+}
 body {
-    background:
-        radial-gradient(800px at 50% 30%, rgba(124, 108, 255, 0.05), transparent 60%),
-        var(--bg-0);
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-}
-
-.window-shell {
-    position: absolute;
-    inset: 0;
-    margin: auto;
-    width: 380px;
-    height: 600px;
-    border-radius: 14px;
-    overflow: hidden;
-    box-shadow:
-        0 1px 0 rgba(255, 255, 255, 0.04) inset,
-        0 30px 80px -20px rgba(0, 0, 0, 0.7),
-        0 0 0 1px rgba(255, 255, 255, 0.05);
-    display: flex;
-    flex-direction: column;
-}
-
-/* ── Title bar ── */
-.titlebar {
-    height: 36px;
-    background: var(--bg-2);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 14px;
-    cursor: grab;
-    flex-shrink: 0;
-    user-select: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-.titlebar:active { cursor: grabbing; }
-
-.titlebar-title {
-    font-family: 'Geist Variable', system-ui, sans-serif;
-    font-size: 12px;
-    font-weight: 400;
-    color: var(--fg-3);
-    letter-spacing: 0.02em;
-}
-
-/* Traffic-light dots — left side */
-.titlebar-dots {
-    display: flex;
-    gap: 7px;
-}
-
-.dot {
-    width: 11px;
-    height: 11px;
-    border-radius: 50%;
-}
-/* Muted versions (not in a room) */
-.dot-red    { background: rgba(255, 95,  87, 0.5); }
-.dot-yellow { background: rgba(254, 188, 46, 0.5); }
-.dot-green  { background: rgba(40,  200, 64, 0.3); }
-
-/* Live state: green dot becomes the active indicator */
-.titlebar.is-live .dot-green {
-    background: var(--success);
-    box-shadow: 0 0 5px rgba(74, 222, 128, 0.5);
-}
-
-/* ── Window body ── */
-.window-body {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-    background: var(--bg-1);
-}
-
-.window-body .container {
-    height: 100%;
-    padding: 28px 28px 24px;
+  background: var(--bg-1);
+  overflow: hidden;
 }

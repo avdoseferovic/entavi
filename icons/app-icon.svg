@@ -1,14 +1,12 @@
-<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background with rounded corners -->
-  <rect width="1024" height="1024" rx="228" fill="#1a1a2e"/>
-
-  <!-- Speech bubble -->
-  <path d="M512 180C326 180 175 310 175 472c0 95 56 179 143 233l-38 120c-4 13 10 24 22 17l140-78c22 5 44 8 70 8 186 0 337-130 337-300S698 180 512 180z" fill="white"/>
-
-  <!-- Circular waveform container -->
-  <circle cx="512" cy="460" r="175" fill="#1a1a2e" opacity="0.12"/>
-
-  <!-- Audio waveform / heartbeat line -->
-  <path d="M310 460 L390 460 L420 380 L460 540 L500 360 L540 560 L570 400 L610 520 L640 430 L680 460 L720 460"
-    stroke="#1a1a2e" stroke-width="36" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Entavi "Dissolve" app icon: teal squircle + white waveform fading into dots -->
+  <rect width="1024" height="1024" rx="228" fill="#0FB5A6"/>
+  <g fill="#fff" transform="scale(21.3333)">
+    <rect x="10" y="18.5" width="3" height="11" rx="1.5"/>
+    <rect x="16" y="14.5" width="3" height="19" rx="1.5"/>
+    <rect x="22" y="10.5" width="3" height="27" rx="1.5"/>
+    <rect x="28" y="14.5" width="3" height="19" rx="1.5"/>
+    <circle cx="34" cy="24" r="2.3" fill-opacity="0.85"/>
+    <circle cx="39" cy="24" r="1.5" fill-opacity="0.45"/>
+  </g>
 </svg>

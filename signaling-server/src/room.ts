@@ -15,7 +15,6 @@ interface JoinMessage {
   room_id: string;
   peer_id: string;
   name: string;
-  password?: string;
   create?: boolean;
 }
 
@@ -25,25 +24,10 @@ interface SignalMessage {
   payload: unknown;
 }
 
-interface KickMessage {
-  type: "kick";
-  peer_id: string;
-}
-
-interface ForceMuteMessage {
-  type: "force_mute";
-  peer_id: string;
-}
-
 interface LeaveMessage {
   type: "leave";
   room_id: string;
   peer_id: string;
-}
-
-interface LockRoomMessage {
-  type: "lock_room";
-  password: string | null;
 }
 
 interface MuteStateMessage {
@@ -55,16 +39,14 @@ type IncomingMessage =
   | JoinMessage
   | LeaveMessage
   | SignalMessage
-  | KickMessage
-  | ForceMuteMessage
-  | LockRoomMessage
   | MuteStateMessage;
 
 interface Attachment {
   peerId: string;
   name: string;
-  isHost: boolean;
-  roomPassword: string;
+  // First peer to join "owns" the room — used only to detect that a room
+  // exists (so later peers can join it). There is no host moderation.
+  isOwner: boolean;
 }
 
 export class Room extends DurableObject<Env> {
@@ -72,34 +54,12 @@ export class Room extends DurableObject<Env> {
   // Class fields are lost on hibernation, so we derive all state from
   // WebSocket attachments which survive hibernation.
 
-  private getHostPeerId(): string | null {
+  private roomExists(): boolean {
     for (const sock of this.ctx.getWebSockets()) {
       const att = sock.deserializeAttachment() as Attachment | null;
-      if (att?.isHost) return att.peerId;
+      if (att?.peerId) return true;
     }
-    return null;
-  }
-
-  private getRoomPassword(): string {
-    for (const sock of this.ctx.getWebSockets()) {
-      const att = sock.deserializeAttachment() as Attachment | null;
-      if (att) return att.roomPassword;
-    }
-    return "";
-  }
-
-  private isLocked(): boolean {
-    return this.getRoomPassword() !== "";
-  }
-
-  private setPassword(password: string): void {
-    for (const sock of this.ctx.getWebSockets()) {
-      const att = sock.deserializeAttachment() as Attachment | null;
-      if (att) {
-        att.roomPassword = password;
-        sock.serializeAttachment(att);
-      }
-    }
+    return false;
   }
 
   private async getTurnCredentials(): Promise<TurnServer[]> {
@@ -107,14 +67,17 @@ export class Room extends DurableObject<Env> {
     if (!apiKey) return [];
 
     // Check cache (TTL: 5 minutes)
-    const cached = await this.ctx.storage.get<{ servers: TurnServer[]; expires: number }>("turn_cache");
+    const cached = await this.ctx.storage.get<{
+      servers: TurnServer[];
+      expires: number;
+    }>("turn_cache");
     if (cached && cached.expires > Date.now()) {
       return cached.servers;
     }
 
     try {
       const resp = await fetch(
-        `https://entavi.metered.live/api/v1/turn/credentials?apiKey=${apiKey}`
+        `https://entavi.metered.live/api/v1/turn/credentials?apiKey=${apiKey}`,
       );
       if (!resp.ok) {
         console.error("TURN credential fetch failed:", resp.status);
@@ -153,7 +116,7 @@ export class Room extends DurableObject<Env> {
 
     // Auto-respond to pings without waking the hibernated DO
     this.ctx.setWebSocketAutoResponse(
-      new WebSocketRequestResponsePair("ping", "pong")
+      new WebSocketRequestResponsePair("ping", "pong"),
     );
 
     return new Response(null, { status: 101, webSocket: client });
@@ -161,7 +124,7 @@ export class Room extends DurableObject<Env> {
 
   async webSocketMessage(
     ws: WebSocket,
-    message: string | ArrayBuffer
+    message: string | ArrayBuffer,
   ): Promise<void> {
     if (typeof message !== "string") return;
 
@@ -174,19 +137,12 @@ export class Room extends DurableObject<Env> {
 
     switch (msg.type) {
       case "join": {
-        // Check if room already has peers (i.e. exists)
-        const hasExistingPeers = this.getHostPeerId() !== null;
+        const hasExistingPeers = this.roomExists();
 
-        // If this is a join (not create) and no one is in the room, reject
+        // If this is a join (not create) and no one is in the room, reject.
+        // QR call codes are single-use: an expired/rotated code reads as not found.
         if (!msg.create && !hasExistingPeers) {
           ws.send(JSON.stringify({ type: "room_not_found" }));
-          return;
-        }
-
-        // Reject if room is password-protected and password doesn't match
-        const storedPassword = this.getRoomPassword();
-        if (storedPassword !== "" && msg.password !== storedPassword) {
-          ws.send(JSON.stringify({ type: "room_locked_error" }));
           return;
         }
 
@@ -198,24 +154,22 @@ export class Room extends DurableObject<Env> {
           await this.ctx.storage.delete(pendingKey);
         }
 
-        // Determine if this peer is the host (first to join)
-        const isHost = !hasExistingPeers;
-        const locked = this.isLocked();
+        // First peer to join owns the room (room-exists marker only).
+        const isOwner = !hasExistingPeers;
 
-        // Attach peer ID, name, host flag, and password to this websocket (hibernation-safe)
+        // Attach peer ID + name (hibernation-safe)
         ws.serializeAttachment({
           peerId: msg.peer_id,
           name: msg.name,
-          isHost,
-          roomPassword: storedPassword,
+          isOwner,
         } satisfies Attachment);
 
-        // Collect existing peers as {peer_id, name, is_host}
-        const peers: { peer_id: string; name: string; is_host: boolean }[] = [];
+        // Collect existing peers as {peer_id, name}
+        const peers: { peer_id: string; name: string }[] = [];
         for (const sock of this.ctx.getWebSockets()) {
           if (sock === ws) continue;
           const att = sock.deserializeAttachment() as Attachment | null;
-          if (att?.peerId) peers.push({ peer_id: att.peerId, name: att.name, is_host: att.isHost });
+          if (att?.peerId) peers.push({ peer_id: att.peerId, name: att.name });
         }
 
         // Fetch TURN credentials
@@ -227,18 +181,15 @@ export class Room extends DurableObject<Env> {
             type: "room_joined",
             room_id: msg.room_id,
             peers,
-            is_host: isHost,
-            locked,
             turn_servers: turnServers,
-          })
+          }),
         );
 
-        // Broadcast peer_joined to existing peers (include name and host status)
+        // Broadcast peer_joined to existing peers
         const joinedMsg = JSON.stringify({
           type: "peer_joined",
           peer_id: msg.peer_id,
           name: msg.name,
-          is_host: isHost,
         });
         for (const sock of this.ctx.getWebSockets()) {
           if (sock === ws) continue;
@@ -277,51 +228,6 @@ export class Room extends DurableObject<Env> {
         break;
       }
 
-      case "kick": {
-        const att = ws.deserializeAttachment() as Attachment | null;
-        if (!att?.isHost) return;
-
-        for (const sock of this.ctx.getWebSockets()) {
-          const sockAtt = sock.deserializeAttachment() as Attachment | null;
-          if (sockAtt?.peerId === msg.peer_id) {
-            sock.send(JSON.stringify({ type: "kicked" }));
-            // Broadcast peer_left to everyone else
-            const leftMsg = JSON.stringify({
-              type: "peer_left",
-              peer_id: msg.peer_id,
-            });
-            for (const other of this.ctx.getWebSockets()) {
-              if (other === sock) continue;
-              const otherAtt = other.deserializeAttachment() as Attachment | null;
-              if (otherAtt?.peerId) {
-                try {
-                  other.send(leftMsg);
-                } catch {
-                  // Socket already closed
-                }
-              }
-            }
-            sock.close(4000, "Kicked by host");
-            break;
-          }
-        }
-        break;
-      }
-
-      case "force_mute": {
-        const att = ws.deserializeAttachment() as Attachment | null;
-        if (!att?.isHost) return;
-
-        for (const sock of this.ctx.getWebSockets()) {
-          const sockAtt = sock.deserializeAttachment() as Attachment | null;
-          if (sockAtt?.peerId === msg.peer_id) {
-            sock.send(JSON.stringify({ type: "force_muted" }));
-            break;
-          }
-        }
-        break;
-      }
-
       case "mute_state": {
         const att = ws.deserializeAttachment() as Attachment | null;
         if (!att?.peerId) return;
@@ -344,31 +250,6 @@ export class Room extends DurableObject<Env> {
         }
         break;
       }
-
-      case "lock_room": {
-        const att = ws.deserializeAttachment() as Attachment | null;
-        if (!att?.isHost) return;
-
-        const newPassword = msg.password ?? "";
-        this.setPassword(newPassword);
-
-        // Broadcast room_locked to all peers (locked = password is set)
-        const lockMsg = JSON.stringify({
-          type: "room_locked",
-          locked: newPassword !== "",
-        });
-        for (const sock of this.ctx.getWebSockets()) {
-          const sockAtt = sock.deserializeAttachment() as Attachment | null;
-          if (sockAtt?.peerId) {
-            try {
-              sock.send(lockMsg);
-            } catch {
-              // Socket already closed
-            }
-          }
-        }
-        break;
-      }
     }
   }
 
@@ -376,7 +257,7 @@ export class Room extends DurableObject<Env> {
     ws: WebSocket,
     code: number,
     reason: string,
-    wasClean: boolean
+    wasClean: boolean,
   ): Promise<void> {
     this.handleDisconnect(ws);
   }
@@ -392,7 +273,6 @@ export class Room extends DurableObject<Env> {
     // Store pending disconnect — give 15s grace period for reconnection
     this.ctx.storage.put(`pending_leave:${att.peerId}`, {
       peerId: att.peerId,
-      isHost: att.isHost,
       timestamp: Date.now(),
     });
 
@@ -404,7 +284,6 @@ export class Room extends DurableObject<Env> {
     // Check all pending leaves
     const entries = await this.ctx.storage.list<{
       peerId: string;
-      isHost: boolean;
       timestamp: number;
     }>({ prefix: "pending_leave:" });
 
@@ -426,10 +305,6 @@ export class Room extends DurableObject<Env> {
       }
 
       // Peer did not reconnect — broadcast peer_left
-      if (pending.isHost) {
-        this.setPassword("");
-      }
-
       const leftMsg = JSON.stringify({
         type: "peer_left",
         peer_id: pending.peerId,
