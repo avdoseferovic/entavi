@@ -231,7 +231,7 @@ export class WebEngine {
           peer_id: msg.peer_id,
           name: msg.name,
         });
-        // Don't create offer — wait for the new peer to send us one
+        // Don't create offer - wait for the new peer to send us one
         break;
       }
 

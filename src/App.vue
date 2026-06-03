@@ -90,7 +90,7 @@ watch(
   (n) => {
     if (n > 0 && state.currentView === 'home') {
       state.currentView = 'room'
-      tauri.showNotification('Incoming call', 'Someone used your code — connecting securely')
+      tauri.showNotification('Incoming call', 'Someone used your code - connecting securely')
     }
   },
 )
@@ -104,7 +104,7 @@ watch(
 )
 
 onMounted(async () => {
-  // Tauri-only wiring — skipped when the frontend is opened in a plain browser
+  // Tauri-only wiring - skipped when the frontend is opened in a plain browser
   // (use the web/ app for browser previews; this is the desktop webview frontend).
   if (isTauriHost) {
     const savedNoiseSuppression = localStorage.getItem('entavi:noiseSuppression')

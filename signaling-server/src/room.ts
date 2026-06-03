@@ -44,7 +44,7 @@ type IncomingMessage =
 interface Attachment {
   peerId: string;
   name: string;
-  // First peer to join "owns" the room — used only to detect that a room
+  // First peer to join "owns" the room - used only to detect that a room
   // exists (so later peers can join it). There is no host moderation.
   isOwner: boolean;
 }
@@ -150,7 +150,7 @@ export class Room extends DurableObject<Env> {
         const pendingKey = `pending_leave:${msg.peer_id}`;
         const pendingLeave = await this.ctx.storage.get(pendingKey);
         if (pendingLeave) {
-          // Cancel the pending leave — this is a rejoin
+          // Cancel the pending leave - this is a rejoin
           await this.ctx.storage.delete(pendingKey);
         }
 
@@ -270,7 +270,7 @@ export class Room extends DurableObject<Env> {
     const att = ws.deserializeAttachment() as Attachment | null;
     if (!att?.peerId) return;
 
-    // Store pending disconnect — give 15s grace period for reconnection
+    // Store pending disconnect - give 15s grace period for reconnection
     this.ctx.storage.put(`pending_leave:${att.peerId}`, {
       peerId: att.peerId,
       timestamp: Date.now(),
@@ -304,7 +304,7 @@ export class Room extends DurableObject<Env> {
         continue;
       }
 
-      // Peer did not reconnect — broadcast peer_left
+      // Peer did not reconnect - broadcast peer_left
       const leftMsg = JSON.stringify({
         type: "peer_left",
         peer_id: pending.peerId,

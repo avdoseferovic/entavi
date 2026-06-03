@@ -84,7 +84,7 @@ watch(
   (n) => {
     if (n > 0 && state.currentView === 'home') {
       state.currentView = 'room'
-      tauri.showNotification('Incoming call', 'Someone used your code — connecting securely')
+      tauri.showNotification('Incoming call', 'Someone used your code - connecting securely')
     }
   },
 )

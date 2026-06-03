@@ -30,7 +30,7 @@ fn queue_signal(tx: &flume::Sender<SignalMessage>, msg: SignalMessage) -> Result
 pub struct Engine {
     inner: Arc<Mutex<Option<EngineInner>>>,
     app: AppHandle,
-    /// Persists across sessions — not inside EngineInner.
+    /// Persists across sessions - not inside EngineInner.
     selected_input_device: std::sync::Mutex<Option<String>>,
     selected_output_device: std::sync::Mutex<Option<String>>,
     signaling_url: std::sync::Mutex<Option<String>>,
@@ -275,7 +275,7 @@ impl Engine {
 
             let mut guard = self.inner.lock().await;
             if let Some(inner) = guard.as_mut() {
-                // Replace capture — old one is dropped, its thread exits when
+                // Replace capture - old one is dropped, its thread exits when
                 // the encoded_tx sender side is dropped (receiver gone).
                 inner.capture = new_capture;
                 tracing::info!("Restarted audio capture with new input device");
@@ -326,7 +326,7 @@ impl Engine {
 
             let mut guard = self.inner.lock().await;
             if let Some(inner) = guard.as_mut() {
-                // Replace playback — old one is dropped, its thread exits when
+                // Replace playback - old one is dropped, its thread exits when
                 // the tx sender side is dropped (receiver gone).
                 inner.playback = new_playback;
                 tracing::info!("Restarted audio playback with new output device");
@@ -400,7 +400,7 @@ async fn engine_loop(
                         handle_signal_message(&engine, &signal_tx, &app, msg).await?;
                     }
                     Err(_) => {
-                        // Channel closed — signaling client dropped. Wait for status or exit.
+                        // Channel closed - signaling client dropped. Wait for status or exit.
                         tracing::warn!("Signal rx closed, engine will exit");
                         break;
                     }
@@ -517,7 +517,7 @@ async fn engine_loop(
                         signaling::SignalingStatus::Failed => {
                             tracing::error!("Signaling reconnection failed permanently");
                             let _ = app.emit(EVENT_STATE_CHANGED, CallState::Error {
-                                message: "Connection lost — could not reconnect".to_string(),
+                                message: "Connection lost - could not reconnect".to_string(),
                             });
                             break;
                         }
@@ -616,7 +616,7 @@ async fn handle_signal_message(
                 let _ = app.emit(EVENT_PEER_JOINED, peer_info);
             }
 
-            // We are the new joiner — send offers to all existing peers
+            // We are the new joiner - send offers to all existing peers
             for peer_info in &peers {
                 let peer = create_peer_conn(engine, peer_info.peer_id.clone()).await?;
                 let sdp = peer.create_offer().await?;
@@ -650,7 +650,7 @@ async fn handle_signal_message(
             name,
             is_host,
         } => {
-            tracing::info!("Peer {peer_id} ({name}) joined — waiting for their offer");
+            tracing::info!("Peer {peer_id} ({name}) joined - waiting for their offer");
             let _ = app.emit(
                 EVENT_PEER_JOINED,
                 PeerInfo {

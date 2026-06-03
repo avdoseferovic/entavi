@@ -1,6 +1,6 @@
 /* ============================================================
-   Entavi — Marketing site (entavi.app)
-   Direction: "Soft Haven" — teal, light & airy, Figtree.
+   Entavi - Marketing site (entavi.app)
+   Direction: "Soft Haven" - teal, light & airy, Figtree.
    Tokens mirror the design system's colors_and_type.css.
    ============================================================ */
 :root {
@@ -89,8 +89,7 @@ section { position: relative; }
 .nav .links a:hover { color: var(--ink); }
 .nav .spacer { flex: 1; }
 .nav .navcta { display: flex; align-items: center; gap: 10px; }
-.nav .signin { font-size: 14.5px; font-weight: 700; color: var(--teal-700); }
-@media (max-width: 760px) { .nav .links { display: none; } .nav .signin { display: none; } }
+@media (max-width: 760px) { .nav .links { display: none; } }
 
 /* ---------- Hero ---------- */
 .hero { background: radial-gradient(1100px 620px at 72% -6%, var(--teal-50), var(--surface) 56%); padding: 78px 0 64px; overflow: hidden; }
@@ -180,15 +179,27 @@ section { position: relative; }
 
 /* ---------- FAQ ---------- */
 .faq { max-width: 760px; margin: 0 auto; }
-.qa { border-bottom: 1px solid var(--line); }
+.qa { border-bottom: 1px solid var(--line); transition: border-color .2s ease; }
+.qa.open { border-color: var(--teal-100); }
 .qa button { width: 100%; text-align: left; background: none; border: none; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 16px; padding: 22px 4px; }
+.qa button:focus-visible { outline: 3px solid var(--teal-100); outline-offset: 4px; border-radius: var(--r-md); }
 .qa .q { flex: 1; font-size: 17px; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
-.qa .chev { color: var(--slate-400); transition: transform .2s; flex: none; display: flex; }
+.qa .chev { color: var(--slate-400); transition: transform .32s cubic-bezier(.22,1,.36,1), color .2s ease; flex: none; display: flex; }
 .qa .chev [data-lucide] { width: 20px; height: 20px; }
-.qa.open .chev { transform: rotate(180deg); }
-.qa .a { overflow: hidden; max-height: 0; transition: max-height .26s ease; }
-.qa.open .a { max-height: 260px; }
-.qa .a p { font-size: 15px; line-height: 1.6; color: var(--slate-500); margin: 0 0 22px; max-width: 62ch; }
+.qa.open .chev { transform: rotate(180deg); color: var(--teal-600); }
+.qa .a { height: 0; overflow: hidden; opacity: 0; transform: translateY(-6px); transition: height .34s cubic-bezier(.22,1,.36,1), opacity .24s ease, transform .34s cubic-bezier(.22,1,.36,1); will-change: height; }
+.qa.open .a { opacity: 1; transform: translateY(0); }
+.qa .a p { font-size: 15px; line-height: 1.6; color: var(--slate-500); margin: 0; padding: 0 4px 22px; max-width: 62ch; }
+@media (prefers-reduced-motion: reduce) {
+  .qa,
+  .qa .chev,
+  .qa .a {
+    transition: none;
+  }
+  .qa .a {
+    transform: none;
+  }
+}
 
 /* ---------- Final CTA ---------- */
 .final { padding: 92px 0; }

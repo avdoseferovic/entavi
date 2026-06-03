@@ -124,7 +124,7 @@ impl PeerConn {
             })
         }));
 
-        // Connection state changes — log and notify engine
+        // Connection state changes - log and notify engine
         let pid_log = peer_id.clone();
         let conn_state_tx_clone = conn_state_tx.clone();
         connection.on_peer_connection_state_change(Box::new(move |state| {

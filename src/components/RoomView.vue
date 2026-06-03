@@ -69,7 +69,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
         <div class="av" style="width: 120px; height: 120px; font-size: 40px">{{ getInitials(getDisplayName()) }}</div>
       </div>
       <div class="calling-name">{{ state.isJoining ? 'Connecting…' : 'Waiting for your guest' }}</div>
-      <div class="calling-status"><Lock :size="14" color="var(--teal-300)" /> Connecting securely — only you two can hear this.</div>
+      <div class="calling-status"><Lock :size="14" color="var(--teal-300)" /> Connecting securely - only you two can hear this.</div>
     </div>
 
     <!-- In-call video grid -->

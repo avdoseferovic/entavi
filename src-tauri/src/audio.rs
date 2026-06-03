@@ -237,7 +237,7 @@ fn run_capture(
     )?;
     stream.play()?;
 
-    // Opus encoder — always 48kHz mono
+    // Opus encoder - always 48kHz mono
     let mut encoder =
         opus::Encoder::new(SAMPLE_RATE, opus::Channels::Mono, opus::Application::Audio)
             .map_err(|e| anyhow::anyhow!("Failed to create opus encoder: {e}"))?;
@@ -249,7 +249,7 @@ fn run_capture(
     let _ = encoder.set_vbr(true);
     let _ = encoder.set_complexity(10);
 
-    // Noise suppression (RNNoise) — works on 480-sample frames in i16 range
+    // Noise suppression (RNNoise) - works on 480-sample frames in i16 range
     const DENOISE_FRAME: usize = nnnoiseless::FRAME_SIZE; // 480
     let mut denoise = nnnoiseless::DenoiseState::new();
     let mut denoise_in = [0.0f32; DENOISE_FRAME];

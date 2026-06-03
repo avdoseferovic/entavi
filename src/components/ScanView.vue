@@ -50,7 +50,7 @@ async function startCamera() {
       startDetection()
     }
   } catch {
-    // No camera / permission denied — paste-a-link remains the path.
+    // No camera / permission denied - paste-a-link remains the path.
     cameraOn.value = false
   }
 }
@@ -68,7 +68,7 @@ function startDetection() {
         if (code) connect(code)
       }
     } catch {
-      /* transient decode error — keep polling */
+      /* transient decode error - keep polling */
     }
   }, 350)
 }
@@ -81,7 +81,7 @@ function stopCamera() {
 
 onMounted(() => {
   if (state.roomNotFound) {
-    error.value = 'That code isn’t active anymore — ask them for a fresh one.'
+    error.value = 'That code isn’t active anymore - ask them for a fresh one.'
     state.roomNotFound = false
   }
   startCamera()
@@ -103,7 +103,7 @@ onUnmounted(() => { stopped = true; stopCamera() })
     </div>
 
     <h1>Scan a code to call</h1>
-    <p>Hold their QR in the frame — the call connects the moment it’s read.</p>
+    <p>Hold their QR in the frame - the call connects the moment it’s read.</p>
 
     <div class="orline">or paste a link</div>
     <div class="paste">

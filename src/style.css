@@ -1,7 +1,7 @@
 /*
  * ══════════════════════════════════════════════════════════════
- *  Entavi Design System — src/style.css
- *  Direction: "Soft Haven" — warm, human, light & airy, teal accent.
+ *  Entavi Design System - src/style.css
+ *  Direction: "Soft Haven" - warm, human, light & airy, teal accent.
  *  Type: Figtree (humanist sans) + Spline Sans Mono (technical accent).
  *  Single source of truth for the Tauri app + web app (@shared).
  *
@@ -26,7 +26,7 @@
   --teal-400: #20C2B0;
   --teal-500: #0FB5A6;   /* PRIMARY */
   --teal-600: #0E9C8F;
-  --teal-700: #0E7C72;   /* deep — links, text-on-light */
+  --teal-700: #0E7C72;   /* deep - links, text-on-light */
   --teal-800: #0C5F58;
   --teal-900: #0C4943;
 
@@ -44,9 +44,9 @@
   --fg-0: #143036;   /* primary text */
   --fg-1: #2E4A50;   /* strong secondary */
   --fg-2: #4B6A6F;   /* secondary text */
-  --fg-3: #9DB3B6;   /* DECORATIVE ONLY — placeholders / disabled */
+  --fg-3: #9DB3B6;   /* DECORATIVE ONLY - placeholders / disabled */
 
-  /* Accent — teal (hover/press DARKEN) */
+  /* Accent - teal (hover/press DARKEN) */
   --accent:       #0FB5A6;
   --accent-hi:    #0E9C8F;   /* hover (one step darker) */
   --accent-lo:    #0E7C72;   /* press / deep link */
@@ -82,12 +82,12 @@
   --font-serif: var(--font-ui);   /* brand has no serif; alias for safety */
   --font-mono:  'Spline Sans Mono Variable', 'Spline Sans Mono', ui-monospace, 'SFMono-Regular', monospace;
 
-  /* Spacing — 4px grid */
+  /* Spacing - 4px grid */
   --s-1:  4px;  --s-2:  8px;  --s-3: 12px; --s-4: 16px;
   --s-5: 20px;  --s-6: 24px;  --s-7: 28px; --s-8: 32px;
   --s-10: 40px; --s-12: 48px; --s-16: 64px;
 
-  /* Radii — generous rounding is the brand signature */
+  /* Radii - generous rounding is the brand signature */
   --radius-sm:   8px;
   --radius-md:   12px;
   --radius-lg:   16px;
@@ -344,7 +344,7 @@ input[type="text"]:disabled, input[type="password"]:disabled { opacity: 0.5; cur
 .setting-group input[type="text"] { margin-bottom: 0; }
 
 /* ══════════════════════════════════════════════════════════════
-   QR HOME — "Scan to call me"
+   QR HOME - "Scan to call me"
    ══════════════════════════════════════════════════════════════ */
 .qrcard {
   background: var(--bg-2);
@@ -464,7 +464,7 @@ input[type="text"]:disabled, input[type="password"]:disabled { opacity: 0.5; cur
 .notrace .lk { color: var(--success); display: inline-flex; }
 
 /* ══════════════════════════════════════════════════════════════
-   SCAN SCREEN — "Scan a code to call"
+   SCAN SCREEN - "Scan a code to call"
    ══════════════════════════════════════════════════════════════ */
 .scancard { width: 100%; max-width: 412px; text-align: center; }
 .viewfinder {

@@ -56,7 +56,7 @@ async function copy() {
   <div class="qrcard">
     <div class="eyebrow">Your call code</div>
     <h1>Scan to call me</h1>
-    <p class="lede">Anyone who scans this can ring you — once. No number, no account, no trail.</p>
+    <p class="lede">Anyone who scans this can ring you - once. No number, no account, no trail.</p>
 
     <div class="qrwrap">
       <template v-if="error">
@@ -89,7 +89,7 @@ async function copy() {
     </div>
 
     <div class="notrace">
-      <span class="lk"><ShieldCheck :size="14" /></span> Nothing is saved — no contacts, no history
+      <span class="lk"><ShieldCheck :size="14" /></span> Nothing is saved - no contacts, no history
     </div>
   </div>
 </template>

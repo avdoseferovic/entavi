@@ -3,8 +3,8 @@ members = ["."]
 
 [package]
 name = "entavi"
-version = "0.3.0"
-description = "Entavi — peer-to-peer voice calls"
+version = "0.3.1"
+description = "Entavi - peer-to-peer voice calls"
 authors = ["Entavi"]
 edition = "2021"
 

@@ -31,7 +31,7 @@ pub enum SignalingStatus {
 }
 
 /// A persistent signaling client that reconnects on failure.
-/// The channels persist across reconnects — the engine loop never sees channel closure
+/// The channels persist across reconnects - the engine loop never sees channel closure
 /// unless the SignalingClient is dropped or max retries are exhausted.
 pub struct SignalingClient {
     pub outgoing_tx: flume::Sender<SignalMessage>,
@@ -137,7 +137,7 @@ impl SignalingClient {
                                         }
                                         Err(e) => {
                                             tracing::warn!(
-                                                "Failed to parse incoming signal: {e} — {text}"
+                                                "Failed to parse incoming signal: {e} - {text}"
                                             );
                                         }
                                     }
@@ -148,7 +148,7 @@ impl SignalingClient {
                             }
                         }
 
-                        // WS read loop exited — signal write task to stop
+                        // WS read loop exited - signal write task to stop
                         ws_closed.store(true, std::sync::atomic::Ordering::Relaxed);
                         write_handle.abort();
 
@@ -203,7 +203,7 @@ impl SignalingClient {
     }
 }
 
-/// Legacy connect function — delegates to SignalingClient for backwards compatibility.
+/// Legacy connect function - delegates to SignalingClient for backwards compatibility.
 pub async fn connect(
     url: &str,
 ) -> Result<(
